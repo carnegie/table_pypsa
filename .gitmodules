@@ -1,0 +1,4 @@
+[submodule "PyPSA"]
+	path = PyPSA
+	url = https://github.com/PyPSA/PyPSA.git
+	branch = master
