@@ -1,6 +1,6 @@
 # Scripts to run PyPSA with input tables
 
-Install PyPSA with
+[Install PyPSA](https://pypsa.readthedocs.io/en/latest/installation.html) with
 
 ```conda install -c conda-forge pypsa```
 
@@ -11,4 +11,4 @@ or
 
 Clone this repository with --recursive (this clones PyPSA as a submodule ), for example
 
-```git clone https://github.com/awongel/PyPSA_modeling.git --recursive```
+```git clone https://github.com/carnegie/clab_pypsa --recursive```
