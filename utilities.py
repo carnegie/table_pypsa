@@ -6,11 +6,6 @@ import xlrd
 import os
 
 """
-read in first sheet of an xlsx file into an xlrd worksheet object
-"""
-def
-
-"""
 read in first sheet of an excel file into an xlrd worksheet object
 """
 def read_excel_file(file_name):
