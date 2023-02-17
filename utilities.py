@@ -140,9 +140,11 @@ def read_excel_file_to_dict(file_name):
         tech_data_list.append(tech_data_dict)
     return case_data_dict, tech_data_list
 
+"""
 case_dict,tech_list = read_excel_file_to_dict('test_case.xlsx')
 
 print('case_dict')
 print(case_dict)
 print('tech_list')
 print(tech_list)
+"""
