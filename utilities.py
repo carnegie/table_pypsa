@@ -6,6 +6,33 @@ import openpyxl
 import os
 
 """
+read in PyPSA input file (either csv or excel[xlsx or xls]) into a list of lists
+"""
+def read_pypsa_input_file(file_name):
+    if file_name.endswith('.csv'):
+        return read_csv_file(file_name)
+    elif file_name.endswith('.xlsx') or file_name.endswith('.xls'):
+        return read_excel_file(file_name)
+    else:
+        print ('file name must end with .csv, .xlsx, or .xls')
+        return None
+
+"""
+read in csv file into a list of lists
+"""
+def read_csv_file(file_name):
+    with open(file_name, 'r') as f:
+        csv_list = []
+        for line in f:
+            csv_list.append(line.split(','))
+    # replace empty strings with None
+    for i in range(len(csv_list)):
+        for j in range(len(csv_list[i])):
+            if csv_list[i][j] == '' or csv_list[i][j] == '\n':
+                csv_list[i][j] = None
+    return csv_list
+
+"""
 read in first sheet of an excel file into a list of lists using openpyxl
 """
 def read_excel_file(file_name):
@@ -112,7 +139,8 @@ def read_excel_file_to_dict(file_name):
     component_attribute_dict_list = create_component_attribute_dict(component_directory, component_dict)
 
     # read in excel file describing case and technology data
-    worksheet = read_excel_file(file_name) # worksheet is a list of lists
+    worksheet = read_pypsa_input_file(file_name) # worksheet is a list of lists
+    print(worksheet)
     worksheet = remove_empty_rows(worksheet)
     start_case_row = find_first_row_with_keyword(worksheet, 'case_data')
     end_case_row = find_first_row_with_keyword(worksheet, 'end_case_data')
@@ -149,7 +177,7 @@ def read_excel_file_to_dict(file_name):
 
 
 
-case_dict,tech_list = read_excel_file_to_dict('test_case.xlsx')
+case_dict,tech_list = read_excel_file_to_dict('test_case.csv')
 
 print('case_dict')
 print(case_dict)
