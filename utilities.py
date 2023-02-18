@@ -9,7 +9,7 @@ import os
 read in first sheet of an excel file into a list of lists using openpyxl
 """
 def read_excel_file(file_name):
-    workbook = openpyxl.load_workbook(file_name)
+    workbook = openpyxl.load_workbook(file_name, data_only=True)
     worksheet = workbook.active
     list_of_lists = []
     for row in worksheet.iter_rows():
@@ -102,7 +102,10 @@ and a list of dictionaries from the 'tech_data' section
 def read_excel_file_to_dict(file_name):
     # create dictionary of allowable attributes for each component type
     component_directory = "./PyPSA/pypsa/component_attrs/"
-    component_types = list_files_in_directory(component_directory)
+    component_dic = {"loads":"load","generators":"generator","lines":"line","transformers":"transformer","buses":"bus","stores":"store",
+                    "carriers":"carrier","links":"link","global_constraints":"global_constraint","networks":"network","shunt_impedances":"shunt_impedance",
+                    "storage_units":"storage_unit","transformer_types":"transformer_type","sub_networks":"sub_network"}
+    component_types = component_dic.keys()
     component_attribute_dict_list = create_component_attribute_dict(component_directory, component_types)
 
     # read in excel file describing case and technology data
@@ -132,6 +135,7 @@ def read_excel_file_to_dict(file_name):
         component = row[0]
         if(component not in component_types):
             raise Exception('Component type in tech_data must be in the list of allowable component types. Failed = '+component)
+        tech_data_dict['component'] = component_dic[component]
         for i in range(1,len(row)):
             val = row[i]
             if(val != None and attributes[i] != None): # only add attribute to dictionary if it is not empty or attribute is not empty
@@ -140,8 +144,9 @@ def read_excel_file_to_dict(file_name):
         tech_data_list.append(tech_data_dict)
     return case_data_dict, tech_data_list
 
+
 """
-case_dict,tech_list = read_excel_file_to_dict('test_case.xlsx')
+case_dict,tech_list = read_excel_file_to_dict('test_case2.xlsx')
 
 print('case_dict')
 print(case_dict)
