@@ -60,11 +60,13 @@ def read_csv_file_to_list_of_attributes(file_name):
 """
 create dictionary of allowable attributes for each component type
 """
-def create_component_attribute_dict(path_to_component_attributes, component_types):
+def create_component_attribute_dict(path_to_component_attributes, component_dict):
     component_attribute_dict = {}
-    for component_type in component_types:
-        component_attribute_dict[component_type] = read_csv_file_to_list_of_attributes(path_to_component_attributes + component_type + '.csv')
-        if component_type in ['loads','generators']:
+    for component_type in component_dict:
+        component_attribute_file_name = component_dict[component_type] 
+        component_attribute_dict[component_type] = read_csv_file_to_list_of_attributes(
+            path_to_component_attributes + component_attribute_file_name + '.csv')
+        if component_type in ['load','generator']:
             component_attribute_dict[component_type].append('series_file')
             component_attribute_dict[component_type].append('normalization')
     return component_attribute_dict
@@ -102,11 +104,12 @@ and a list of dictionaries from the 'tech_data' section
 def read_excel_file_to_dict(file_name):
     # create dictionary of allowable attributes for each component type
     component_directory = "./PyPSA/pypsa/component_attrs/"
-    component_dic = {"loads":"load","generators":"generator","lines":"line","transformers":"transformer","buses":"bus","stores":"store",
-                    "carriers":"carrier","links":"link","global_constraints":"global_constraint","networks":"network","shunt_impedances":"shunt_impedance",
-                    "storage_units":"storage_unit","transformer_types":"transformer_type","sub_networks":"sub_network"}
-    component_types = component_dic.keys()
-    component_attribute_dict_list = create_component_attribute_dict(component_directory, component_types)
+    component_dict = {"load":"loads","generator":"generators","line":"lines","transformer":"transformers","bus":"buses","store":"stores",
+                    "carrier":"carriers","link":"links","global_constraint":"global_constraints","network":"networks","shunt_impedance":"shunt_impedances",
+                    "storage_unit":"storage_units","transformer_type":"transformer_types","sub_network":"sub_networks"}
+    # make a list of component file names (plural of component type)
+
+    component_attribute_dict_list = create_component_attribute_dict(component_directory, component_dict)
 
     # read in excel file describing case and technology data
     worksheet = read_excel_file(file_name) # worksheet is a list of lists
@@ -124,7 +127,7 @@ def read_excel_file_to_dict(file_name):
     # create list of dictionaries of technology data
     attributes = tech_data[0] 
 
-    if(attributes[0].lower() != 'component_class'):
+    if(attributes[0].lower() != 'component'):
         raise Exception('First column of tech_data must be "component_class"')
     good,bad_list = check_if_all_elements_in_list_are_in_any_list_in_dict_of_lists_or_empty(attributes[1:], component_attribute_dict_list)
     if(good == False):
@@ -133,9 +136,9 @@ def read_excel_file_to_dict(file_name):
     for row in tech_data[1:]:
         tech_data_dict = {}
         component = row[0]
-        if(component not in component_types):
+        if(component not in component_dict):
             raise Exception('Component type in tech_data must be in the list of allowable component types. Failed = '+component)
-        tech_data_dict['component'] = component_dic[component]
+        tech_data_dict['component'] = component
         for i in range(1,len(row)):
             val = row[i]
             if(val != None and attributes[i] != None): # only add attribute to dictionary if it is not empty or attribute is not empty
@@ -145,11 +148,11 @@ def read_excel_file_to_dict(file_name):
     return case_data_dict, tech_data_list
 
 
-"""
-case_dict,tech_list = read_excel_file_to_dict('test_case2.xlsx')
+
+case_dict,tech_list = read_excel_file_to_dict('test_case.xlsx')
 
 print('case_dict')
 print(case_dict)
 print('tech_list')
 print(tech_list)
-"""
+
