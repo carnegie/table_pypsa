@@ -94,7 +94,7 @@ def create_component_attribute_dict(path_to_component_attributes, component_dict
         component_attribute_dict[component_type] = read_csv_file_to_list_of_attributes(
             path_to_component_attributes + component_attribute_file_name + '.csv')
         if component_type in ['load','generator']:
-            component_attribute_dict[component_type].append('series_file')
+            component_attribute_dict[component_type].append('time_series_file')
             component_attribute_dict[component_type].append('normalization')
     return component_attribute_dict
 
@@ -107,8 +107,7 @@ def list_files_in_directory(directory):
 """
 return true if all elements of a list are in any of the lists in a dictionary of lists or are empty strings or all spaces, else return the elements that are not in any of the lists in the dictionary
 """
-def check_if_all_elements_in_list_are_in_any_list_in_dict_of_lists_or_empty(element_list, dict_of_lists):
-    print (dict_of_lists)
+def check_attributes(element_list, dict_of_lists):
     for element in element_list:
         if element != None:
             if not any(element in dict_of_lists[key] for key in dict_of_lists):
@@ -140,7 +139,6 @@ def read_excel_file_to_dict(file_name):
 
     # read in excel file describing case and technology data
     worksheet = read_pypsa_input_file(file_name) # worksheet is a list of lists
-    print(worksheet)
     worksheet = remove_empty_rows(worksheet)
     start_case_row = find_first_row_with_keyword(worksheet, 'case_data')
     end_case_row = find_first_row_with_keyword(worksheet, 'end_case_data')
@@ -157,7 +155,7 @@ def read_excel_file_to_dict(file_name):
 
     if(attributes[0].lower() != 'component'):
         raise Exception('First column of tech_data must be "component_class"')
-    good,bad_list = check_if_all_elements_in_list_are_in_any_list_in_dict_of_lists_or_empty(attributes[1:], component_attribute_dict_list)
+    good,bad_list = check_attributes(attributes[1:], component_attribute_dict_list)
     if(good == False):
         raise Exception('Attributes in tech_data must be in the list of allowable attributes for the component type. Failed = '+concatenate_list_of_strings(bad_list))
     tech_data_list = []
@@ -166,21 +164,18 @@ def read_excel_file_to_dict(file_name):
         component = row[0]
         if(component not in component_dict):
             raise Exception('Component type in tech_data must be in the list of allowable component types. Failed = '+component)
-        tech_data_dict['component'] = component
+        tech_data_dict['component'] = ''.join([word.capitalize() for word in component.split('_')])
+        # for link replace 'bus' with 'bus0'
+        if component == 'link':
+            use_attributes = list(attributes)
+            use_attributes[attributes.index('bus')] = 'bus0'
+        else:
+            use_attributes = attributes
         for i in range(1,len(row)):
             val = row[i]
-            if(val != None and attributes[i] != None): # only add attribute to dictionary if it is not empty or attribute is not empty
-                if(attributes[i] in component_attribute_dict_list[component]):
-                    tech_data_dict[attributes[i]] = val
+            attribute = use_attributes[i]
+            if(val != None and attribute != None): # only add attribute to dictionary if it is not empty or attribute is not empty
+                if(attribute in component_attribute_dict_list[component]):
+                    tech_data_dict[attribute] = val
         tech_data_list.append(tech_data_dict)
     return case_data_dict, tech_data_list
-
-
-""""
-case_dict,tech_list = read_excel_file_to_dict('test_case.xlsx')
-
-print('case_dict')
-print(case_dict)
-print('tech_list')
-print(tech_list)
-"""
