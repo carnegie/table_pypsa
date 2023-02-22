@@ -11,14 +11,23 @@ args = parser.parse_args()
 input_file = args.filename
 
 """
+Check if directory exists, if not create it
+"""
+def check_directory(directory):
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+"""
 Scale all float in tech_list by a numerics_scaling excluding decay rate, efficiency and charging time
 """
-def scale_by_numeric_factor(scale_factor, tech_list):
-    for tech_dict in tech_list:
-        for key, value in tech_dict.items():
-            if type(value) == float:
-                if key != "decay_rate" and key != "charging_time" and key != "efficiency":
-                    tech_dict[key] = value * scale_factor
+def scale_by_numeric_factor(scale_factor, tech_dict):
+    # Scale all float or pandas series in tech_list by a numerics_scaling excluding decay rate, efficiency and charging time
+    for key in tech_dict:
+        if type(tech_dict[key]) is float or type(tech_dict[key]) is pd.Series:
+            if key not in ["standing_loss", "efficiency", "max_hours", "p_set"]:
+                tech_dict[key] = tech_dict[key] * scale_factor
+
+    return tech_dict
 
 """
 Divide all dataframes in df_dict values by numerics_scaling if dataframe column has "cost", "$" or "Expenditure" in name
@@ -74,9 +83,6 @@ def add_buses_to_network(n, tech_list):
 Define PyPSA network and add components based on input dictionaries
 """
 def dicts_to_pypsa(case_dict, tech_list):
-    # Set logging level
-    logging.basicConfig(level=case_dict["logging_level"].upper())
-
     # Define PyPSA network
     n = pypsa.Network()
 
@@ -100,8 +106,14 @@ def dicts_to_pypsa(case_dict, tech_list):
                 else:
                     logging.warning("Time series file not found for " + tech_dict["name"] + ". Skipping component.")
                     continue
-        print("\nTech dict")
-        print(tech_dict)
+
+        # Scale by numerics_scaling, this avoids rounding otherwise done in Gurobi for small numbers
+        #tech_dict = scale_by_numeric_factor(case_dict["numerics_scaling"], tech_dict)
+
+        # Add p_nom_extendable attribute to generators, storages and links if p_nom is not defined
+        if tech_dict["component"] == "Generator" or tech_dict["component"] == "StorageUnit" or tech_dict["component"] == "Link":
+            if "p_nom" not in tech_dict:
+                tech_dict["p_nom_extendable"] = True
 
         # Add components to network based on tech_dict as attributes for network add function, excluding "component" and "name"
         n.add(tech_dict["component"], tech_dict["name"], **{k: v for k, v in tech_dict.items() if k != "component" and k != "name"})
@@ -110,22 +122,24 @@ def dicts_to_pypsa(case_dict, tech_list):
 """
 Write results to excel file and pickle file
 """
-def write_results_to_file(case_dict, df_dict, n, scaling_factor):
-    # Divide results by scaling factor
-    df_dict = divide_results_by_numeric_factor(df_dict, scaling_factor)
+def write_results_to_file(case_dict, df_dict, n):
 
     # Write results to excel file
-    with pd.ExcelWriter(case_dict["output_file"]+".xlsx") as writer:
+    check_directory(case_dict["output_path"])
+    check_directory(os.path.join(case_dict["output_path"], case_dict["case_name"]))
+    output_file = os.path.join(case_dict["output_path"], case_dict["case_name"], case_dict["filename_prefix"])
+
+    with pd.ExcelWriter(output_file+".xlsx") as writer:
         for results in df_dict:
             df_dict[results].to_excel(writer, sheet_name=results)
 
     # Write results to pickle file
-    with open(case_dict["output_file"]+".pickle", 'wb') as f:
-        pickle.dump([case_dict, df_dict, n], f)
+    with open(output_file+".pickle", 'wb') as f:
+        pickle.dump(df_dict, f)
 
     # Logging info
-    logging.info("Results written to file: " + case_dict["output_file"] + ".xlsx")
-    logging.info("Results written to file: " + case_dict["output_file"] + ".pickle")
+    logging.info("Results written to file: " + output_file + ".xlsx")
+    logging.info("Results written to file: " + output_file + ".pickle")
 
 """
 Postprocess results and collect in dataframes
@@ -157,13 +171,16 @@ def postprocess_results(n, case_dict):
             [name + " state of charge" for name in n.storage_units_t["state_of_charge"].columns.to_list()])))], axis=1)
 
     # Collect objective and system cost in one dataframe
-    system_cost = n.statistics()["Capital Expenditure"].sum() / case_dict["num_time_periods"] + n.statistics()[
+    system_cost = n.statistics()["Capital Expenditure"].sum() / case_dict["time_steps"] + n.statistics()[
         "Operational Expenditure"].sum()
     case_results_df = pd.DataFrame([[n.objective, system_cost]], columns=['objective [$]', 'system cost [$/h]'])
 
     # Collect results in one dictionary
     df_dict = {'time inputs': time_inputs_df, 'case results': case_results_df, 'tech results': n.statistics(),
                'time results': time_results_df}
+
+    # Divide results by scaling factor
+    #df_dict = divide_results_by_numeric_factor(df_dict, case_dict["numerics_scaling"])
 
     return df_dict
 
@@ -172,26 +189,17 @@ def main():
     # Read in xlsx case input file and translate to dictionaries
     case_dict, tech_list = read_excel_file_to_dict(input_file)
 
-    print (case_dict)
-    print ("\n", tech_list)
-
-    # # Scale by numerics_scaling, this avoids rounding otherwise done in Gurobi for small numbers
-    # scale_by_numeric_factor(case_dict["numerics_scaling"], tech_list)
-    #
     # Define PyPSA network
     network = dicts_to_pypsa(case_dict, tech_list)
-    pd.set_option('display.max_columns', None)
-    print(network.generators)
-    print(network.loads)
 
     # Solve the linear optimization power flow with Gurobi
     network.lopf(solver_name='gurobi')
 
-    # # Postprocess results and write to excel, pickle
-    # postprocess_results(network, case_dict)
-    #
-    # # Write results to excel file
-    # write_results_to_file(case_dict, df_dict, network)
+    # Postprocess results and write to excel, pickle
+    output_df_dict = postprocess_results(network, case_dict)
+
+    # Write results to excel file
+    write_results_to_file(case_dict, output_df_dict, network)
 
 
 if __name__ == "__main__":
