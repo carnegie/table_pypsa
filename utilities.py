@@ -177,16 +177,20 @@ def read_excel_file_to_dict(file_name):
             logging.error('Component type in tech_data must be in the list of allowable component types. Failed = '+component)
         tech_data_dict['component'] = component
         # for link replace 'bus' with 'bus0'
-        if component == 'link':
+        if component == 'Link':
             use_attributes = list(attributes)
             use_attributes[attributes.index('bus')] = 'bus0'
+        # for storage unit replace 'efficiency' with 'efficiency_store'
+        elif component == 'StorageUnit':
+            use_attributes = list(attributes)
+            use_attributes[attributes.index('efficiency')] = 'efficiency_store'
         else:
             use_attributes = attributes
         for i in range(1,len(row)):
             val = row[i]
             attribute = use_attributes[i]
-            if(val != None and attribute != None): # only add attribute to dictionary if it is not empty or attribute is not empty
-                if(attribute in component_attribute_dict_list[component]):
-                    tech_data_dict[attribute] = val
+            # only add attribute to dictionary if it is not empty or attribute is not empty
+            if(val != None and attribute != None):
+                tech_data_dict[attribute] = val
         tech_data_list.append(tech_data_dict)
     return case_data_dict, tech_data_list

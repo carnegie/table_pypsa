@@ -20,13 +20,12 @@ def check_directory(directory):
 """
 Scale all float in tech_list by a numerics_scaling excluding decay rate, efficiency and charging time
 """
-def scale_by_numeric_factor(scale_factor, tech_dict):
-    # Scale all float or pandas series in tech_list by a numerics_scaling excluding decay rate, efficiency and charging time
+def scale_normalize_time_series(scale_factor, tech_dict):
+    # Scale all pandas series in tech_list by numerics_scaling and normalize by normalization factor
     for key in tech_dict:
-        if type(tech_dict[key]) is float or type(tech_dict[key]) is pd.Series:
-            if key not in ["standing_loss", "efficiency", "max_hours", "p_set"]:
-                tech_dict[key] = tech_dict[key] * scale_factor
-
+        if type(tech_dict[key]) is pd.Series:
+            normalization = tech_dict['normalization'] / tech_dict[key].mean() if 'normalization' in tech_dict else 1.
+            tech_dict[key] = tech_dict[key] * scale_factor * normalization
     return tech_dict
 
 """
@@ -46,7 +45,6 @@ def skip_until_begin_data(ts_file):
     with open(ts_file) as fin:
         # read to keyword 'BEGIN_DATA' and then one more line (header line)
         data_reader = csv.reader(fin)
-        # Throw away all lines up to and include the line that has 'BEGIN_GLOBAL_DATA' in the first cell of the line
         line_index = 1
         while True:
             line = next(data_reader)
@@ -97,7 +95,10 @@ def dicts_to_pypsa(case_dict, tech_list):
                 input_file = os.path.join(case_dict["input_path"],tech_dict["time_series_file"])
                 ts = process_time_series_file(input_file, case_dict["datetime_start"], case_dict["datetime_end"])
                 if ts is not None:
-                    n.snapshots = ts.index
+                    # Include time series as snapshots taking every delta_t value
+                    n.snapshots = ts.iloc[::case_dict['delta_t'], :].index if case_dict['delta_t'] else ts.index
+                    # Test scaling time series by numerics_scaling, not debugged for factors > 1
+                    ts.iloc[:, 0] = ts.iloc[:, 0] * case_dict["numerics_scaling"]
                     if tech_dict["component"] == "Generator":
                         tech_dict["p_max_pu"] = ts.iloc[:, 0]
                     elif tech_dict["component"] == "Load":
@@ -107,8 +108,9 @@ def dicts_to_pypsa(case_dict, tech_list):
                     logging.warning("Time series file not found for " + tech_dict["name"] + ". Skipping component.")
                     continue
 
-        # Scale by numerics_scaling, this avoids rounding otherwise done in Gurobi for small numbers
-        #tech_dict = scale_by_numeric_factor(case_dict["numerics_scaling"], tech_dict)
+        # Scale by numerics_scaling, this avoids rounding otherwise done in Gurobi for small numbers and normalize time series
+        # Scaling in separate function, commented for debugging
+        #tech_dict = scale_normalize_time_series(case_dict["numerics_scaling"], tech_dict)
 
         # Add p_nom_extendable attribute to generators, storages and links if p_nom is not defined
         if tech_dict["component"] == "Generator" or tech_dict["component"] == "StorageUnit" or tech_dict["component"] == "Link":
@@ -171,7 +173,7 @@ def postprocess_results(n, case_dict):
             [name + " state of charge" for name in n.storage_units_t["state_of_charge"].columns.to_list()])))], axis=1)
 
     # Collect objective and system cost in one dataframe
-    system_cost = n.statistics()["Capital Expenditure"].sum() / case_dict["time_steps"] + n.statistics()[
+    system_cost = n.statistics()["Capital Expenditure"].sum() / case_dict["time_range"] + n.statistics()[
         "Operational Expenditure"].sum()
     case_results_df = pd.DataFrame([[n.objective, system_cost]], columns=['objective [$]', 'system cost [$/h]'])
 
