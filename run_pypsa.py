@@ -18,15 +18,15 @@ def check_directory(directory):
         os.makedirs(directory)
 
 """
-Scale all float in tech_list by a numerics_scaling excluding decay rate, efficiency and charging time
+Scale all float in component_list by a numerics_scaling excluding decay rate, efficiency and charging time
 """
-def scale_normalize_time_series(scale_factor, tech_dict):
-    # Scale all pandas series in tech_list by numerics_scaling and normalize by normalization factor
-    for key in tech_dict:
-        if type(tech_dict[key]) is pd.Series or "cost" in key:
-            normalization = tech_dict['normalization'] / tech_dict[key].mean() if 'normalization' in tech_dict else 1.
-            tech_dict[key] = tech_dict[key] * scale_factor * normalization
-    return tech_dict
+def scale_normalize_time_series(scale_factor, component_dict):
+    # Scale all pandas series in component_list by numerics_scaling and normalize by normalization factor
+    for key in component_dict:
+        if type(component_dict[key]) is pd.Series or "cost" in key:
+            normalization = component_dict['normalization'] / component_dict[key].mean() if 'normalization' in component_dict else 1.
+            component_dict[key] = component_dict[key] * scale_factor * normalization
+    return component_dict
 
 """
 Divide all dataframes in df_dict values by numerics_scaling if dataframe column has "cost", "$" or "Expenditure" in name
@@ -34,7 +34,7 @@ Divide all dataframes in df_dict values by numerics_scaling if dataframe column 
 def divide_results_by_numeric_factor(df_dict, scaling_factor):
     for results in df_dict:
         for col in df_dict[results].columns:
-            if "cost" in col or "$" in col or "Expenditure" in col or "Revenue" in col:
+            if not "capacity factor" in col.lower():
                 df_dict[results][col] = df_dict[results][col] / scaling_factor
     return df_dict
 
@@ -69,54 +69,54 @@ def process_time_series_file(ts_file, date_time_start, date_time_end):
         return
     return ts
 
-def add_buses_to_network(n, tech_list):
-    # Add buses to network based on 'bus' in tech_list
-    for tech_dict in tech_list:
-        if "bus" in tech_dict:
-            if tech_dict["bus"] not in n.buses.index:
-                n.add("Bus", tech_dict["bus"])
+def add_buses_to_network(n, component_list):
+    # Add buses to network based on 'bus' in component_list
+    for component_dict in component_list:
+        if "bus" in component_dict:
+            if component_dict["bus"] not in n.buses.index:
+                n.add("Bus", component_dict["bus"])
     return n
 
 """
 Define PyPSA network and add components based on input dictionaries
 """
-def dicts_to_pypsa(case_dict, tech_list):
+def dicts_to_pypsa(case_dict, component_list):
     # Define PyPSA network
     n = pypsa.Network()
 
-    # Add buses to network based on 'bus' in tech_list
-    n = add_buses_to_network(n, tech_list)
+    # Add buses to network based on 'bus' in component_list
+    n = add_buses_to_network(n, component_list)
 
-    for tech_dict in tech_list:
+    for component_dict in component_list:
         # for generators and loads, add time series to components
-        if tech_dict["component"] == "Generator" or tech_dict["component"] == "Load":
+        if component_dict["component"] == "Generator" or component_dict["component"] == "Load":
             # Add time series to components
-            if "time_series_file" in tech_dict:
-                input_file = os.path.join(case_dict["input_path"],tech_dict["time_series_file"])
+            if "time_series_file" in component_dict:
+                input_file = os.path.join(case_dict["input_path"],component_dict["time_series_file"])
                 ts = process_time_series_file(input_file, case_dict["datetime_start"], case_dict["datetime_end"])
                 if ts is not None:
                     # Include time series as snapshots taking every delta_t value
                     n.snapshots = ts.iloc[::case_dict['delta_t'], :].index if case_dict['delta_t'] else ts.index
                     # Add time series to component
-                    if tech_dict["component"] == "Generator":
-                        tech_dict["p_max_pu"] = ts.iloc[:, 0]
-                    elif tech_dict["component"] == "Load":
-                        tech_dict["p_set"] = ts.iloc[:, 0]
-                    # Remove time_series_file from tech_dict
-                    tech_dict.pop("time_series_file")
+                    if component_dict["component"] == "Generator":
+                        component_dict["p_max_pu"] = ts.iloc[:, 0]
+                    elif component_dict["component"] == "Load":
+                        component_dict["p_set"] = ts.iloc[:, 0]
+                    # Remove time_series_file from component_dict
+                    component_dict.pop("time_series_file")
                     # Scale by numerics_scaling, this avoids rounding otherwise done in Gurobi for small numbers and normalize time series
-                    tech_dict = scale_normalize_time_series(case_dict["numerics_scaling"], tech_dict)
+                    component_dict = scale_normalize_time_series(case_dict["numerics_scaling"], component_dict)
                 else:
-                    logging.warning("Time series file not found for " + tech_dict["name"] + ". Skipping component.")
+                    logging.warning("Time series file not found for " + component_dict["name"] + ". Skipping component.")
                     continue
 
         # Add p_nom_extendable attribute to generators, storages and links if p_nom is not defined
-        if tech_dict["component"] == "Generator" or tech_dict["component"] == "StorageUnit" or tech_dict["component"] == "Link":
-            if "p_nom" not in tech_dict:
-                tech_dict["p_nom_extendable"] = True
+        if component_dict["component"] == "Generator" or component_dict["component"] == "StorageUnit" or component_dict["component"] == "Link":
+            if "p_nom" not in component_dict:
+                component_dict["p_nom_extendable"] = True
 
-        # Add components to network based on tech_dict as attributes for network add function, excluding "component" and "name"
-        n.add(tech_dict["component"], tech_dict["name"], **{k: v for k, v in tech_dict.items() if k != "component" and k != "name"})
+        # Add components to network based on component_dict as attributes for network add function, excluding "component" and "name"
+        n.add(component_dict["component"], component_dict["name"], **{k: v for k, v in component_dict.items() if k != "component" and k != "name"})
     return n
 
 """
@@ -171,12 +171,12 @@ def postprocess_results(n, case_dict):
             [name + " state of charge" for name in n.storage_units_t["state_of_charge"].columns.to_list()])))], axis=1)
 
     # Collect objective and system cost in one dataframe
-    system_cost = n.statistics()["Capital Expenditure"].sum() / case_dict["time_range"] + n.statistics()[
+    system_cost = n.statistics()["Capital Expenditure"].sum() / case_dict["total_hours"] + n.statistics()[
         "Operational Expenditure"].sum()
     case_results_df = pd.DataFrame([[n.objective, system_cost]], columns=['objective [$]', 'system cost [$/h]'])
 
     # Collect results in one dictionary
-    df_dict = {'time inputs': time_inputs_df, 'case results': case_results_df, 'tech results': n.statistics(),
+    df_dict = {'time inputs': time_inputs_df, 'case results': case_results_df, 'component results': n.statistics(),
                'time results': time_results_df}
 
     # Divide results by scaling factor
@@ -187,10 +187,10 @@ def postprocess_results(n, case_dict):
 
 def main():
     # Read in xlsx case input file and translate to dictionaries
-    case_dict, tech_list = read_excel_file_to_dict(input_file)
+    case_dict, component_list = read_excel_file_to_dict(input_file)
 
     # Define PyPSA network
-    network = dicts_to_pypsa(case_dict, tech_list)
+    network = dicts_to_pypsa(case_dict, component_list)
 
     # Solve the linear optimization power flow with Gurobi
     network.lopf(solver_name='gurobi')
