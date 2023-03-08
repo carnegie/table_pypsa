@@ -130,8 +130,15 @@ Code to read in an excel file, create a dictionary from the 'case_data' section,
 and a list of dictionaries from the 'component_data' section
 """
 def read_excel_file_to_dict(file_name):
+    # Check if PyPSA is in current directory else assume clab_pypsa is a submodule in this directory
+    if os.path.exists('./PyPSA/pypsa/component_attrs/'):
+        component_directory = "./PyPSA/pypsa/component_attrs/"
+    elif os.path.exists('./clab_pypsa/PyPSA/pypsa/component_attrs/'):
+        component_directory = "clab_pypsa/PyPSA/pypsa/component_attrs/"
+    else:
+        logging.error("Cannot find PyPSA directory")
+
     # create dictionary of allowable attributes for each component type
-    component_directory = "./PyPSA/pypsa/component_attrs/"
     component_dict = {"Load":"loads","Generator":"generators","Line":"lines","Transformer":"transformers","Bus":"buses","Store":"stores",
                       "Carrier":"carriers","Link":"links","GlobalConstraint":"global_constraints","Network":"networks","ShuntImpedance":"shunt_impedances",
                       "StorageUnit":"storage_units","TransformerType":"transformer_types","SubNetwork":"sub_networks"}
