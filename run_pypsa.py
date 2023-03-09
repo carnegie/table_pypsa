@@ -70,11 +70,14 @@ def process_time_series_file(ts_file, date_time_start, date_time_end):
     return ts
 
 def add_buses_to_network(n, component_list):
-    # Add buses to network based on 'bus' in component_list
+    # Add buses to network based on 'bus' and 'bus1' in component_list
     for component_dict in component_list:
         if "bus" in component_dict:
             if component_dict["bus"] not in n.buses.index:
                 n.add("Bus", component_dict["bus"])
+        if "bus1" in component_dict:
+            if component_dict["bus1"] not in n.buses.index:
+                n.add("Bus", component_dict["bus1"])
     return n
 
 """
