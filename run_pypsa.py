@@ -64,25 +64,35 @@ def process_time_series_file(ts_file, date_time_start, date_time_end):
     ts.drop(columns=['day', 'month', 'year', 'hour'], inplace=True)
     ts = ts.loc[date_time_start: date_time_end]
 
+    # Check dtype of time series
+    if ts.dtypes[0] != 'float64':
+        ts = ts.astype(float)
+
     if ts.empty:
         logging.warning("Time series was not properly read in and dataframe is empty! Returning now.")
         return
     return ts
 
 def add_buses_to_network(n, component_list):
-    # Add buses to network based on 'bus' in component_list
+    # Add buses to network based on 'bus' and 'bus1' in component_list
     for component_dict in component_list:
         if "bus" in component_dict:
             if component_dict["bus"] not in n.buses.index:
-                n.add("Bus", component_dict["bus"])
+                if "co2" in component_dict["bus"]:
+                    n.add("Bus", component_dict["bus"], carrier="co2")
+                else:
+                    n.add("Bus", component_dict["bus"])
+        if "bus1" in component_dict:
+            if component_dict["bus1"] not in n.buses.index:
+                n.add("Bus", component_dict["bus1"])
     return n
 
 """
 Define PyPSA network and add components based on input dictionaries
 """
-def dicts_to_pypsa(case_dict, component_list):
+def dicts_to_pypsa(case_dict, component_list, component_attr):
     # Define PyPSA network
-    n = pypsa.Network()
+    n = pypsa.Network(override_component_attrs=component_attr)
 
     # Add buses to network based on 'bus' in component_list
     n = add_buses_to_network(n, component_list)
@@ -122,7 +132,7 @@ def dicts_to_pypsa(case_dict, component_list):
 """
 Write results to excel file and pickle file
 """
-def write_results_to_file(case_dict, df_dict, n):
+def write_results_to_file(case_dict, df_dict):
 
     # Write results to excel file
     check_directory(case_dict["output_path"])
@@ -187,10 +197,10 @@ def postprocess_results(n, case_dict):
 
 def main():
     # Read in xlsx case input file and translate to dictionaries
-    case_dict, component_list = read_excel_file_to_dict(input_file)
+    case_dict, component_list, component_attributes = read_excel_file_to_dict(input_file)
 
     # Define PyPSA network
-    network = dicts_to_pypsa(case_dict, component_list)
+    network = dicts_to_pypsa(case_dict, component_list, component_attributes)
 
     # Solve the linear optimization power flow with Gurobi
     network.lopf(solver_name='gurobi')
@@ -199,7 +209,7 @@ def main():
     output_df_dict = postprocess_results(network, case_dict)
 
     # Write results to excel file
-    write_results_to_file(case_dict, output_df_dict, network)
+    write_results_to_file(case_dict, output_df_dict)
 
 
 if __name__ == "__main__":
