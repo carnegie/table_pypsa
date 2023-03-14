@@ -64,6 +64,10 @@ def process_time_series_file(ts_file, date_time_start, date_time_end):
     ts.drop(columns=['day', 'month', 'year', 'hour'], inplace=True)
     ts = ts.loc[date_time_start: date_time_end]
 
+    # Check dtype of time series
+    if ts.dtypes[0] != 'float64':
+        ts = ts.astype(float)
+
     if ts.empty:
         logging.warning("Time series was not properly read in and dataframe is empty! Returning now.")
         return
