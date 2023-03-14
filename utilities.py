@@ -2,8 +2,10 @@
 Utility functions for process_input
 """
 
+import numpy as np
 import openpyxl
 import os, logging
+import pypsa
 
 """
 Read in PyPSA input file (either csv or excel[xlsx or xls]) into a list of lists
@@ -77,27 +79,24 @@ def find_first_row_with_keyword(list_of_lists, keyword):
     return -1
 
 """
-Read first column of a csv file into a list, ignoring the first row
-"""
-def read_csv_file_to_list_of_attributes(file_name):
-    with open(file_name, 'r') as f:
-        csv_list = []
-        for line in f:
-            csv_list.append(strip_quotes(line.split(',')[0]))
-    return csv_list[1:]
-
-"""
 Create dictionary of allowable attributes for each component type
 """
-def create_component_attribute_dict(path_to_component_attributes, component_dict):
-    component_attribute_dict = {}
-    for component_type in component_dict:
-        component_attribute_file_name = component_dict[component_type] 
-        component_attribute_dict[component_type] = read_csv_file_to_list_of_attributes(
-            path_to_component_attributes + component_attribute_file_name + '.csv')
-        if component_type in ['Load','Generator']:
-            component_attribute_dict[component_type].append('time_series_file')
-            component_attribute_dict[component_type].append('normalization')
+def update_component_attribute_dict(attributes_from_file):
+    component_attribute_dict = pypsa.descriptors.Dict({k: v.copy() for k, v in pypsa.components.component_attrs.items()})
+
+    bus_numbers = [int(bus.replace("bus","")) for bus in attributes_from_file if bus is not None and bus.startswith('bus') and bus != 'bus']
+    # Add attributes for components that are not in default PyPSA
+
+    for ibus in bus_numbers:
+        # Bus0 and bus1 are default in PyPSA, so don't add them
+        if ibus>=2:
+            component_attribute_dict["Link"].loc["bus{0}".format(ibus)] = ["string", np.nan, np.nan, "bus {0}".format(ibus), "Input (optional)"]
+            component_attribute_dict["Link"].loc["efficiency{0}".format(ibus)] = ["static or series", "per unit", 1.0, "bus {0} efficiency".format(ibus), "Input (optional)"]
+            component_attribute_dict["Link"].loc["p{0}".format(ibus)] = ["series", "MW", 0.0, "bus {0} output".format(ibus), "Output", ]
+
+    for component_type in ['Load','Generator']:
+        component_attribute_dict[component_type].loc["time_series_file"] = ["string", np.nan, np.nan, "time series file", "Input (optional)"]
+        component_attribute_dict[component_type].loc["normalization"] = ["string", np.nan, np.nan, "normalization", "Input (optional)"]
     return component_attribute_dict
 
 """
@@ -112,7 +111,7 @@ Return true if all elements of a list are in any of the lists in a dictionary of
 def check_attributes(element_list, dict_of_lists):
     for element in element_list:
         if element != None:
-            if not any(element in dict_of_lists[key] for key in dict_of_lists):
+            if not any(element in dict_of_lists[key].index for key in dict_of_lists):
                 return False, element
     return True, None
 
@@ -130,22 +129,6 @@ Code to read in an excel file, create a dictionary from the 'case_data' section,
 and a list of dictionaries from the 'component_data' section
 """
 def read_excel_file_to_dict(file_name):
-    # Check if PyPSA is in current directory else assume clab_pypsa is a submodule in this directory
-    if os.path.exists('./PyPSA/pypsa/component_attrs/'):
-        component_directory = "./PyPSA/pypsa/component_attrs/"
-    elif os.path.exists('./clab_pypsa/PyPSA/pypsa/component_attrs/'):
-        component_directory = "clab_pypsa/PyPSA/pypsa/component_attrs/"
-    else:
-        logging.error("Cannot find PyPSA directory")
-
-    # create dictionary of allowable attributes for each component type
-    component_dict = {"Load":"loads","Generator":"generators","Line":"lines","Transformer":"transformers","Bus":"buses","Store":"stores",
-                      "Carrier":"carriers","Link":"links","GlobalConstraint":"global_constraints","Network":"networks","ShuntImpedance":"shunt_impedances",
-                      "StorageUnit":"storage_units","TransformerType":"transformer_types","SubNetwork":"sub_networks"}
-
-    # make a list of component file names (plural of component type)
-    component_attribute_dict_list = create_component_attribute_dict(component_directory, component_dict)
-
     # read in excel file describing case and component data
     worksheet = read_pypsa_input_file(file_name) # worksheet is a list of lists
     worksheet = remove_empty_rows(worksheet)
@@ -164,21 +147,24 @@ def read_excel_file_to_dict(file_name):
     # Set logging level
     logging.basicConfig(level=case_data_dict["logging_level"].upper())
 
-
     # create list of dictionaries of component data
     attributes = component_data[0] 
 
     if(attributes[0].lower() != 'component'):
         logging.error('First column of component_data must be "component"')
         logging.error('Failed = '+attributes[0])
-    good,bad_list = check_attributes(attributes[1:], component_attribute_dict_list)
+
+    # check that attributes are in the list of allowable attributes for the component type
+    component_attribute_dictionary = update_component_attribute_dict(attributes[1:])
+    good,bad_list = check_attributes(attributes[1:], component_attribute_dictionary)
     if(good == False):
         logging.error('Attributes in component_data must be in the list of allowable attributes for the component type. Failed = '+concatenate_list_of_strings(bad_list))
+        return None
     component_data_list = []
     for row in component_data[1:]:
         component_data_dict = {}
         component = row[0]
-        if(component not in component_dict):
+        if(component not in pypsa.components.component_attrs.keys()):
             if component[0] == '#':
                 logging.info('Skipping commented out component: '+component)
                 continue
@@ -201,4 +187,4 @@ def read_excel_file_to_dict(file_name):
             if(val != None and attribute != None):
                 component_data_dict[attribute] = val
         component_data_list.append(component_data_dict)
-    return case_data_dict, component_data_list
+    return case_data_dict, component_data_list, component_attribute_dictionary
