@@ -192,14 +192,15 @@ def postprocess_results(n, case_dict):
 
 def main():
     # Read in xlsx case input file and translate to dictionaries
-    case_dict, component_list = read_excel_file_to_dict(input_file)
+    #BH 15mar causes unpack error:  case_dict, component_list = read_excel_file_to_dict(input_file)
+    case_dict, component_list, *the_rest = read_excel_file_to_dict(input_file)
 
     # Define PyPSA network
     network = dicts_to_pypsa(case_dict, component_list)
 
     # Solve the linear optimization power flow with Gurobi
-    #network.lopf(solver_name='gurobi')
-    network.lopf(solver_name='glpk')
+    network.lopf(solver_name='gurobi')
+    #network.lopf(solver_name='glpk')
     
 
     # Postprocess results and write to excel, pickle
