@@ -121,9 +121,12 @@ def dicts_to_pypsa(case_dict, component_list, component_attr):
                     continue
 
         # Add p_nom_extendable attribute to generators, storages and links if p_nom is not defined
-        if component_dict["component"] == "Generator" or component_dict["component"] == "StorageUnit" or component_dict["component"] == "Link":
+        if component_dict["component"] in ["Generator", "StorageUnit", "Link"]:
             if "p_nom" not in component_dict:
                 component_dict["p_nom_extendable"] = True
+        elif component_dict["component"] == "Store":
+                if "e_nom" not in component_dict:
+                    component_dict["e_nom_extendable"] = True
 
         # Add components to network based on component_dict as attributes for network add function, excluding "component" and "name"
         n.add(component_dict["component"], component_dict["name"], **{k: v for k, v in component_dict.items() if k != "component" and k != "name"})
@@ -179,6 +182,12 @@ def postprocess_results(n, case_dict):
     time_results_df = pd.concat([time_results_df, n.storage_units_t["state_of_charge"].rename(columns=dict(
         zip(n.storage_units_t["state_of_charge"].columns.to_list(),
             [name + " state of charge" for name in n.storage_units_t["state_of_charge"].columns.to_list()])))], axis=1)
+    time_results_df = pd.concat([time_results_df, n.stores_t["e"].rename(columns=dict(
+        zip(n.stores_t["e"].columns.to_list(),
+            [name + " state of charge" for name in n.stores_t["e"].columns.to_list()])))], axis=1)
+    time_results_df = pd.concat([time_results_df, n.links_t["p0"].rename(columns=dict(
+        zip(n.links_t["p0"].columns.to_list(),
+            [name + " dispatch" for name in n.links_t["p0"].columns.to_list()])))], axis=1)
 
     # Collect objective and system cost in one dataframe
     system_cost = n.statistics()["Capital Expenditure"].sum() / case_dict["total_hours"] + n.statistics()[

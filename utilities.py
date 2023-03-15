@@ -178,11 +178,15 @@ def read_excel_file_to_dict(file_name):
         elif component == 'StorageUnit':
             use_attributes = list(attributes)
             use_attributes[attributes.index('efficiency')] = 'efficiency_store'
+        elif component == 'Store':
+            use_attributes = list(attributes)
+            use_attributes[attributes.index('p_min_pu')] = 'e_min_pu'
+            use_attributes[attributes.index('p_nom')] = 'e_nom'
         else:
             use_attributes = attributes
         for i in range(1,len(row)):
-            val = row[i]
             attribute = use_attributes[i]
+            val = row[i]
             # only add attribute to dictionary if it is not empty or attribute is not empty
             if(val != None and attribute != None):
                 component_data_dict[attribute] = val
