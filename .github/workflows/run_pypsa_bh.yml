@@ -41,3 +41,14 @@ jobs:
     - name: Simple test
       run:
         python run_pypsa_bh.py
+        # Use the next line (instead of the above) to capture the run output for downloading later
+        #python run_pypsa_bh.py > test_output.txt
+
+    # Uncomment this section to upload output file(s) at the end of this job
+    #- uses: actions/upload-artifact@v3
+    #  with:
+    #    name: my-artifact
+    #    path: test_output.txt
+        
+        
+        
