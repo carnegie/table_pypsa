@@ -4,8 +4,11 @@ Utility functions for process_input
 
 import numpy as np
 import openpyxl
-import os, logging
+import logging
 import pypsa
+from utilities.load_costs import load_costs
+from utilities.utilities import *
+from datetime import datetime
 
 """
 Read in PyPSA input file (either csv or excel[xlsx or xls]) into a list of lists
@@ -49,36 +52,6 @@ def read_excel_file(file_name):
     return list_of_lists
 
 """
-Strip string of leading and trailing single and double quotes, if present
-"""
-def strip_quotes(string):
-    if string is None:
-        return None
-    if string.startswith('"') and string.endswith('"'):
-        return string[1:-1]
-    if string.startswith("'") and string.endswith("'"):
-        return string[1:-1]
-    return string
-
-"""
-Eliminate all lists in a list of lists that are empty or contain only empty strings
-"""
-def remove_empty_rows(list_of_lists):
-    return [row for row in list_of_lists if not all(x is None for x in row)]
-
-"""
-Return as integer the index of first list in list of lists that only has a keyword in the first element, 
-checking in a case insensitive manner
-"""
-
-def find_first_row_with_keyword(list_of_lists, keyword):
-    for i in range(len(list_of_lists)):
-        if not ( keyword is None or list_of_lists[i][0] is None):
-            if keyword.lower() == list_of_lists[i][0].lower():
-                return i
-    return -1
-
-"""
 Create dictionary of allowable attributes for each component type
 """
 def update_component_attribute_dict(attributes_from_file):
@@ -99,36 +72,11 @@ def update_component_attribute_dict(attributes_from_file):
         component_attribute_dict[component_type].loc["normalization"] = ["string", np.nan, np.nan, "normalization", "Input (optional)"]
     return component_attribute_dict
 
-"""
-List files in a directory, stripping out hidden files and eliminating file extension
-"""
-def list_files_in_directory(directory):
-    return [f.split('.')[0] for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f)) and not f.startswith('.')]
-
-"""
-Return true if all elements of a list are in any of the lists in a dictionary of lists or are empty strings or all spaces, else return the elements that are not in any of the lists in the dictionary
-"""
-def check_attributes(element_list, dict_of_lists):
-    for element in element_list:
-        if element != None:
-            if not any(element in dict_of_lists[key].index for key in dict_of_lists):
-                return False, element
-    return True, None
-
-"""
-Concatenate list of strings into a single string separated by spaces
-"""
-def concatenate_list_of_strings(list_of_strings):
-    if type(list_of_strings) is list:
-        return ' '.join(list_of_strings)
-    else:
-        return list_of_strings
-
 """"
-Code to read in an excel file, create a dictionary from the 'case_data' section, 
+Code to read in an excel or csv file, create a dictionary from the 'case_data' section, 
 and a list of dictionaries from the 'component_data' section
 """
-def read_excel_file_to_dict(file_name):
+def read_input_file_to_dict(file_name):
     # read in excel file describing case and component data
     worksheet = read_pypsa_input_file(file_name) # worksheet is a list of lists
     worksheet = remove_empty_rows(worksheet)
@@ -146,6 +94,12 @@ def read_excel_file_to_dict(file_name):
 
     # Set logging level
     logging.basicConfig(level=case_data_dict["logging_level"].upper())
+
+    # Number of full years between two datetimes given as strings
+    nyears = (datetime.strptime(case_data_dict["datetime_end"], "%Y-%m-%d %H:%M:%S") - datetime.strptime(
+        case_data_dict["datetime_start"], "%Y-%m-%d %H:%M:%S")).days // 365
+    # Load PyPSA costs
+    costs = load_costs(tech_costs=case_data_dict["costs_path"], config="./utilities/cost_config.yaml", Nyears=nyears)
 
     # create list of dictionaries of component data
     attributes = component_data[0] 
@@ -170,6 +124,13 @@ def read_excel_file_to_dict(file_name):
                 continue
             logging.error('Component type in component_data must be in the list of allowable component types. Failed = '+component)
         component_data_dict['component'] = component
+        component_name = row[1]
+        # If component name was already used, add a number to the end of the name
+        if component_name in [component_dict['name'] for component_dict in component_data_list]:
+            component_data_dict['name'] = component_name + " " + str(len([component_dict['name'] for component_dict in component_data_list if component_dict['name'] == component_name]))
+            logging.warning('Component name already used. Renaming to '+component_data_dict['name'])
+        else:
+            component_data_dict['name'] = component_name
         # for link replace 'bus' with 'bus0'
         if component == 'Link':
             use_attributes = list(attributes)
@@ -184,11 +145,26 @@ def read_excel_file_to_dict(file_name):
             use_attributes[attributes.index('p_nom')] = 'e_nom'
         else:
             use_attributes = attributes
-        for i in range(1,len(row)):
+        for i in range(2,len(row)):
             attribute = use_attributes[i]
             val = row[i]
-            # only add attribute to dictionary if it is not empty or attribute is not empty
-            if(val != None and attribute != None):
-                component_data_dict[attribute] = val
+            # only add attribute to dictionary if it is not empty and attribute is not empty
+            if attribute != None:
+                # if "name", "bus", or "time_series_file" is in attribute or value can be converted to a float, use that
+                if (val != None and (any(x in attribute for x in ['name','bus','time_series_file']) or is_number(val))):
+                    component_data_dict[attribute] = val
+                    read_attr = None
+                # if otherwise value is a string, use that as read attribute
+                elif type(val) is str:
+                    read_attr = val
+                # if value is empty, use attribute as read attribute
+                else:
+                    read_attr = attribute
+
+                # If read_attr is defined, use it to get the value from the costs dataframe
+                if (read_attr != None and read_attr in costs.columns and component_name in costs.index):
+                        component_data_dict[attribute] = costs.loc[component_name, read_attr]
+                        logging.info('Using default value for '+component + ' "' + component_name +'" for '+ attribute
+                                     + ' = '+str(component_data_dict[attribute]))
         component_data_list.append(component_data_dict)
     return case_data_dict, component_data_list, component_attribute_dictionary
