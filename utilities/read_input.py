@@ -72,6 +72,55 @@ def update_component_attribute_dict(attributes_from_file):
         component_attribute_dict[component_type].loc["normalization"] = ["string", np.nan, np.nan, "normalization", "Input (optional)"]
     return component_attribute_dict
 
+"""
+Define special attributes for some components
+"""
+def define_special_attributes(comp, attr):
+    # for link replace 'bus' with 'bus0'
+    if comp == 'Link':
+        use_attr = list(attr)
+        use_attr[attr.index('bus')] = 'bus0'
+    # for storage unit replace 'efficiency' with 'efficiency_store'
+    elif comp == 'StorageUnit':
+        use_attr = list(attr)
+        use_attr[attr.index('efficiency')] = 'efficiency_store'
+    elif comp == 'Store':
+        use_attr = list(attr)
+        use_attr[attr.index('p_min_pu')] = 'e_min_pu'
+        use_attr[attr.index('p_nom')] = 'e_nom'
+    else:
+        use_attr = attr
+    return use_attr
+
+"""
+Read in component data
+"""
+def read_component_data(comp_dict, attr, val, technology, costs_df):
+    sign = 1
+    # if value is a number or name, read that.
+    # if it's empty or a cost name, use read_attr to get the value from the costs dataframe.
+    if attr != None:
+        # if "name", "bus", or "time_series_file" is in attr or value can be converted to a float, use that
+        if (val != None and (any(x in attr for x in ['name', 'bus', 'time_series_file']) or is_number(val))):
+            comp_dict[attr] = val
+            read_attr = None
+        # if otherwise value is a string, use that as read attr
+        elif type(val) is str:
+            if val[0] == '-':
+                sign = -1
+                val = val[1:]
+            read_attr = val
+        # if value is empty, use attr as read attr
+        else:
+            read_attr = attr
+
+        # if read_attr is defined, use it to get the value from the costs dataframe
+        if (read_attr != None and read_attr in costs_df.columns and technology in costs_df.index):
+            comp_dict[attr] = costs_df.loc[technology, read_attr] * sign
+            logging.info('Using default value for ' + comp_dict["component"] + ' "' + technology + '" for ' + attr
+                         + ' = ' + str(comp_dict[attr]))
+    return comp_dict
+
 """"
 Code to read in an excel or csv file, create a dictionary from the 'case_data' section, 
 and a list of dictionaries from the 'component_data' section
@@ -124,47 +173,17 @@ def read_input_file_to_dict(file_name):
                 continue
             logging.error('Component type in component_data must be in the list of allowable component types. Failed = '+component)
         component_data_dict['component'] = component
-        component_name = row[1]
-        # If component name was already used, add a number to the end of the name
-        if component_name in [component_dict['name'] for component_dict in component_data_list]:
-            component_data_dict['name'] = component_name + " " + str(len([component_dict['name'] for component_dict in component_data_list if component_dict['name'] == component_name]))
-            logging.warning('Component name already used. Renaming to '+component_data_dict['name'])
-        else:
-            component_data_dict['name'] = component_name
-        # for link replace 'bus' with 'bus0'
-        if component == 'Link':
-            use_attributes = list(attributes)
-            use_attributes[attributes.index('bus')] = 'bus0'
-        # for storage unit replace 'efficiency' with 'efficiency_store'
-        elif component == 'StorageUnit':
-            use_attributes = list(attributes)
-            use_attributes[attributes.index('efficiency')] = 'efficiency_store'
-        elif component == 'Store':
-            use_attributes = list(attributes)
-            use_attributes[attributes.index('p_min_pu')] = 'e_min_pu'
-            use_attributes[attributes.index('p_nom')] = 'e_nom'
-        else:
-            use_attributes = attributes
+        component_data_dict['name'] = row[1]
+        # Read in technology name before additional specifications following % and remove space at end
+        tech_name = row[1].split('%')[0].strip()
+
+        # Determine special attributes for component
+        use_attributes = define_special_attributes(component, attributes)
+
         for i in range(2,len(row)):
             attribute = use_attributes[i]
-            val = row[i]
-            # only add attribute to dictionary if it is not empty and attribute is not empty
-            if attribute != None:
-                # if "name", "bus", or "time_series_file" is in attribute or value can be converted to a float, use that
-                if (val != None and (any(x in attribute for x in ['name','bus','time_series_file']) or is_number(val))):
-                    component_data_dict[attribute] = val
-                    read_attr = None
-                # if otherwise value is a string, use that as read attribute
-                elif type(val) is str:
-                    read_attr = val
-                # if value is empty, use attribute as read attribute
-                else:
-                    read_attr = attribute
+            value = row[i]
+            component_data_dict = read_component_data(component_data_dict, attribute, value, tech_name, costs)
 
-                # If read_attr is defined, use it to get the value from the costs dataframe
-                if (read_attr != None and read_attr in costs.columns and component_name in costs.index):
-                        component_data_dict[attribute] = costs.loc[component_name, read_attr]
-                        logging.info('Using default value for '+component + ' "' + component_name +'" for '+ attribute
-                                     + ' = '+str(component_data_dict[attribute]))
         component_data_list.append(component_data_dict)
     return case_data_dict, component_data_list, component_attribute_dictionary
