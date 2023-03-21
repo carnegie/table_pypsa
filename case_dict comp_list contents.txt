@@ -1,0 +1,83 @@
+case_dict
+input_path /carnegie/data/Shared/Labs/Caldeira Lab/Everyone/energy_demand_capacity_data/test_case_solar_wind_demand/
+output_path output_data
+case_name test_case
+filename_prefix test_prefix
+datetime_start 2016-01-01 00:00:00
+datetime_end 2017-01-01 0:00:00
+delta_t 1
+no_time_steps 8784
+total_hours 8784
+logging_level warning
+numerics_scaling 10000000000
+time_unit h
+power unit kW
+currency $
+
+component list dicts
+component Generator
+name solar
+carrier solar
+bus bus
+time_series_file solar.csv
+capital_cost 171.65443408509168
+---------
+component Load
+name load
+carrier load
+bus bus
+time_series_file demand.csv
+---------
+component Generator
+name natgas
+carrier natgas
+bus bus
+capital_cost 104.08824719790415
+marginal_cost 0.039088110924995347
+---------
+component StorageUnit
+name battery
+carrier battery
+bus bus
+capital_cost 223.87212597208145
+max_hours 6.008
+cyclic_state_of_charge True
+efficiency_store 0.9
+standing_loss 1.14e-06
+---------
+component Generator
+name nuclear
+carrier nuclear
+bus bus
+capital_cost 548.7837488924664
+marginal_cost 0.025047272727272724
+---------
+component Generator
+name wind
+carrier wind
+bus bus
+time_series_file wind.csv
+capital_cost 181.49756560590552
+---------
+component Link
+name electrolysis
+carrier electrolysis
+bus0 bus
+bus1 h2
+capital_cost 43.92
+efficiency 0.7
+---------
+component Store
+name h2_storage
+carrier h2_storage
+bus h2
+capital_cost 0.140544
+---------
+component Link
+name fuel_cell
+carrier fuel_cell
+bus0 h2
+bus1 bus
+capital_cost 17.568
+efficiency 0.5
+---------

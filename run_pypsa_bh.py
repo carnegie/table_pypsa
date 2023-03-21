@@ -62,11 +62,29 @@ Read in time series file and format as pandas dataframe and return dataframe if 
 def process_time_series_file(ts_file, date_time_start, date_time_end):
     skiprows = skip_until_begin_data(ts_file)
     ts = pd.read_csv(ts_file, parse_dates=False, sep=",", skiprows=skiprows)
-    ts.columns = [x.lower() for x in ts.columns]
-    ts['date'] = pd.to_datetime(ts[['day', 'month', 'year', 'hour']])
+    ts.columns = [x.lower() for x in ts.columns]    
+    
+    # BH subtract 1 from hour column
+    ts['hour'] = ts['hour'] - 1
+    # BH
+    
+    ts['date'] = pd.to_datetime(ts[['day', 'month', 'year', 'hour']])    
+    
+    # BH 5mar23 check current 'date' column format
+    #print('head')
+    #print(ts['date'].head(5))
+    #print('tail')
+    #print(ts['date'].tail(5))
+    #print()
+    # BH
+    
     ts = ts.set_index(['date'])
     ts.drop(columns=['day', 'month', 'year', 'hour'], inplace=True)
     ts = ts.loc[date_time_start: date_time_end]
+    
+    # BH 5mar23 check current 'date' column format
+    #print(ts.head(10))
+    # BH
 
     if ts.empty:
         logging.warning("Time series was not properly read in and dataframe is empty! Returning now.")
@@ -194,6 +212,19 @@ def main():
     # Read in xlsx case input file and translate to dictionaries
     #BH 15mar causes unpack error:  case_dict, component_list = read_excel_file_to_dict(input_file)
     case_dict, component_list, *the_rest = read_excel_file_to_dict(input_file)
+
+    # BH 20mar23 see what are in these
+    """
+    print('case_dict')
+    for k,v in case_dict.items():
+        print(k,v)
+    print()
+    print('component list dicts')
+    for d in component_list:
+        for k,v in d.items():
+            print(k,v)
+        print('---------')
+    """
 
     # Define PyPSA network
     network = dicts_to_pypsa(case_dict, component_list)
