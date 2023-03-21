@@ -59,6 +59,7 @@ def process_time_series_file(ts_file, date_time_start, date_time_end):
     skiprows = skip_until_begin_data(ts_file)
     ts = pd.read_csv(ts_file, parse_dates=False, sep=",", skiprows=skiprows)
     ts.columns = [x.lower() for x in ts.columns]
+    ts['hour'] = ts['hour'] - 1  # adjust MEM format 1..24 to Python 0..23
     ts['date'] = pd.to_datetime(ts[['day', 'month', 'year', 'hour']])
     ts = ts.set_index(['date'])
     ts.drop(columns=['day', 'month', 'year', 'hour'], inplace=True)
