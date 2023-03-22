@@ -3,6 +3,7 @@ import argparse, logging
 import pypsa
 import pandas as pd
 from utilities import read_excel_file_to_dict
+import sys, platform
 
 # Parse the input file as command line argument
 """  bh 5mar23
@@ -64,27 +65,12 @@ def process_time_series_file(ts_file, date_time_start, date_time_end):
     ts = pd.read_csv(ts_file, parse_dates=False, sep=",", skiprows=skiprows)
     ts.columns = [x.lower() for x in ts.columns]    
     
-    # BH subtract 1 from hour column
-    ts['hour'] = ts['hour'] - 1
-    # BH
+    ts['hour'] = ts['hour'] - 1 # convert MEM 1..24 to Py 0..23
     
     ts['date'] = pd.to_datetime(ts[['day', 'month', 'year', 'hour']])    
-    
-    # BH 5mar23 check current 'date' column format
-    #print('head')
-    #print(ts['date'].head(5))
-    #print('tail')
-    #print(ts['date'].tail(5))
-    #print()
-    # BH
-    
     ts = ts.set_index(['date'])
     ts.drop(columns=['day', 'month', 'year', 'hour'], inplace=True)
     ts = ts.loc[date_time_start: date_time_end]
-    
-    # BH 5mar23 check current 'date' column format
-    #print(ts.head(10))
-    # BH
 
     if ts.empty:
         logging.warning("Time series was not properly read in and dataframe is empty! Returning now.")
@@ -213,27 +199,21 @@ def main():
     #BH 15mar causes unpack error:  case_dict, component_list = read_excel_file_to_dict(input_file)
     case_dict, component_list, *the_rest = read_excel_file_to_dict(input_file)
 
-    # BH 20mar23 see what are in these
-    """
-    print('case_dict')
-    for k,v in case_dict.items():
-        print(k,v)
-    print()
-    print('component list dicts')
-    for d in component_list:
-        for k,v in d.items():
-            print(k,v)
-        print('---------')
-    """
-
     # Define PyPSA network
     network = dicts_to_pypsa(case_dict, component_list)
 
     # Solve the linear optimization power flow with Gurobi
-    network.lopf(solver_name='gurobi')
-    #network.lopf(solver_name='glpk')
+    print("Running network.lopf(solver_name='gurobi')")
+    # Capture output to lopf_output.txt
+    if platform.system() == 'Windows':
+        stdout_copy = sys.stdout
+        with open('lopf_output.txt', 'w') as sys.stdout:
+            network.lopf(solver_name='gurobi')
+        sys.stdout = stdout_copy  # restore stdout
+    else:  # Linux
+        network.lopf(solver_name='gurobi') > 'lopf_output.txt'
+    print('Wrote to lopf_output.txt')
     
-
     # Postprocess results and write to excel, pickle
     output_df_dict = postprocess_results(network, case_dict)
 
@@ -241,5 +221,45 @@ def main():
     write_results_to_file(case_dict, output_df_dict, network)
 
 
+def get_expected_table(filename):
+    """ extract table as list of lists from expected output file"""
+    expected_table = []
+    with open(filename, 'r') as f:
+        found_table = False
+        for line in f:
+            line = line.strip()
+            column_values = line.split()
+            if not found_table:
+                if column_values == ['Objective', 'Residual']:
+                    found_table = True
+                    continue
+            
+            # process table rows
+            if found_table:
+                if column_values == []:
+                    break
+                expected_table.append(column_values[:-1])  # drop Time header and time value last column
+    return expected_table
+
+
 if __name__ == "__main__":
     main()
+    # Compare output to expected output
+    expected_filename = "solar output Py format.txt"
+    output_filename = "lopf_output.txt"
+    
+    expected_table = get_expected_table(expected_filename)
+    lopf_table = get_expected_table(output_filename)
+    same = expected_table == lopf_table
+    print('='*30)
+    if same:
+        print('OK: output matches expected', )
+    else:
+        print('ERROR: output does not match expected')
+        print('Non-matching lines:')
+        for exp, actual in zip(expected_table, lopf_table):
+            if exp != actual:
+                print('SB ', exp)
+                print('WAS', actual)
+                print()
+    print('='*30)
