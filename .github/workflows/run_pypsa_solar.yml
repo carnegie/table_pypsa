@@ -43,7 +43,7 @@ jobs:
         
     - name: Simple test
       run:
-        python run_pypsa.py
+        python run_pypsa.py test_case.xlsx
         # Use the next line (instead of the above) to capture the run output for downloading later
         #python run_pypsa_bh.py > test_output.txt
 
