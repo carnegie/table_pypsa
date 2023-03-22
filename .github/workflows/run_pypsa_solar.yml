@@ -4,10 +4,8 @@
 name: Test PyPSA solar.csv
 
 on:
-  #workflow_dispatch:
+  workflow_dispatch:
   push:
-    branches:
-      - "adjust_hour_data"
 
 jobs:
   build:
