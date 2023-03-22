@@ -3,6 +3,7 @@ import argparse, logging
 import pypsa
 import pandas as pd
 from utilities import read_excel_file_to_dict
+import sys, platform
 
 # Parse the input file as command line argument
 parser = argparse.ArgumentParser()
@@ -196,6 +197,49 @@ def postprocess_results(n, case_dict):
     return df_dict
 
 
+def get_expected_table(filename):
+    """ extract table as list of lists from expected output file"""
+    expected_table = []
+    with open(filename, 'r') as f:
+        found_table = False
+        for line in f:
+            line = line.strip()
+            column_values = line.split()
+            if not found_table:
+                if column_values == ['Objective', 'Residual']:
+                    found_table = True
+                    continue
+            
+            # process table rows
+            if found_table:
+                if column_values == []:
+                    break
+                expected_table.append(column_values[:-1])  # drop Time header and time value last column
+    return expected_table
+
+
+def compare_actual_to_expected():
+    """ compare actual table to expected table"""
+    expected_filename = "solar output Py format.txt"
+    output_filename = "lopf_output.txt"
+    
+    expected_table = get_expected_table(expected_filename)
+    lopf_table = get_expected_table(output_filename)
+    same = expected_table == lopf_table
+    print('='*30)
+    if same:
+        print('OK: output matches expected', )
+    else:  # not the same
+        print('ERROR: output does not match expected')
+        print('Non-matching lines:')
+        for exp, actual in zip(expected_table, lopf_table):
+            if exp != actual:
+                print('SB ', exp)
+                print('WAS', actual)
+                print()
+    print('='*30)
+
+
 def main():
     # Read in xlsx case input file and translate to dictionaries
     case_dict, component_list, component_attributes = read_excel_file_to_dict(input_file)
@@ -204,13 +248,28 @@ def main():
     network = dicts_to_pypsa(case_dict, component_list, component_attributes)
 
     # Solve the linear optimization power flow with Gurobi
-    network.lopf(solver_name='gurobi')
+    #network.lopf(solver_name='gurobi')
+    
+    # Solve the linear optimization power flow with Gurobi
+    print("Running network.lopf(solver_name='gurobi')")
+    # Capture output to lopf_output.txt
+    if platform.system() == 'Windows':
+        stdout_copy = sys.stdout
+        with open('lopf_output.txt', 'w') as sys.stdout:
+            network.lopf(solver_name='gurobi')
+        sys.stdout = stdout_copy  # restore stdout
+    else:  # Linux
+        network.lopf(solver_name='gurobi') > 'lopf_output.txt'
+    print('Wrote to lopf_output.txt')
 
     # Postprocess results and write to excel, pickle
     output_df_dict = postprocess_results(network, case_dict)
 
     # Write results to excel file
     write_results_to_file(case_dict, output_df_dict)
+    
+    # Compare actual output to expected output
+    compare_actual_to_expected()
 
 
 if __name__ == "__main__":
