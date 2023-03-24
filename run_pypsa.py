@@ -6,9 +6,13 @@ from utilities import read_excel_file_to_dict
 
 # Parse the input file as command line argument
 parser = argparse.ArgumentParser()
-parser.add_argument('-f', '--filename', help="Input csv case file", required=True)
-args = parser.parse_args()
-input_file = args.filename
+import platform
+if platform.node() == 'Bills-P51':
+    input_file = 'test_case.xlsx'
+else:
+    parser.add_argument('-f', '--filename', help="Input csv case file", required=True)
+    args = parser.parse_args()
+    input_file = args.filename
 
 """
 Check if directory exists, if not create it
@@ -59,6 +63,7 @@ def process_time_series_file(ts_file, date_time_start, date_time_end):
     skiprows = skip_until_begin_data(ts_file)
     ts = pd.read_csv(ts_file, parse_dates=False, sep=",", skiprows=skiprows)
     ts.columns = [x.lower() for x in ts.columns]
+    ts['hour'] = ts['hour'] - 1  # convert MEM 1..24 to py 0..23
     ts['date'] = pd.to_datetime(ts[['day', 'month', 'year', 'hour']])
     ts = ts.set_index(['date'])
     ts.drop(columns=['day', 'month', 'year', 'hour'], inplace=True)
@@ -103,7 +108,13 @@ def dicts_to_pypsa(case_dict, component_list, component_attr):
             # Add time series to components
             if "time_series_file" in component_dict:
                 input_file = os.path.join(case_dict["input_path"],component_dict["time_series_file"])
-                ts = process_time_series_file(input_file, case_dict["datetime_start"], case_dict["datetime_end"])
+                try:
+                    ts = process_time_series_file(input_file, case_dict["datetime_start"], case_dict["datetime_end"])
+                except Exception:  # not connected to DGE, use csv's in test directory
+                    case_dict['input_path'] = "./test"
+                    input_file = os.path.join(case_dict["input_path"],component_dict["time_series_file"])
+                    ts = process_time_series_file(input_file, case_dict["datetime_start"], case_dict["datetime_end"])
+                    
                 if ts is not None:
                     # Include time series as snapshots taking every delta_t value
                     n.snapshots = ts.iloc[::case_dict['delta_t'], :].index if case_dict['delta_t'] else ts.index
