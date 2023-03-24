@@ -82,12 +82,12 @@ def dicts_to_pypsa(case_dict, component_list, component_attr):
             if "time_series_file" in component_dict:
                 ts_file = os.path.join(case_dict["input_path"],component_dict["time_series_file"])
                 try:
-                     ts = process_time_series_file(ts_file, case_dict["datetime_start"], case_dict["datetime_end"])
-                 except Exception:  # not connected to DGE, use csv's in test directory
-                     logging.warning("Time series file not found for " + component_dict["name"] + ". Using time series files in test directory.")
-                     case_dict['input_path'] = "./test"
-                     ts_file = os.path.join(case_dict["input_path"],component_dict["time_series_file"])
-                     ts = process_time_series_file(ts_file, case_dict["datetime_start"], case_dict["datetime_end"])
+                    ts = process_time_series_file(ts_file, case_dict["datetime_start"], case_dict["datetime_end"])
+                except Exception:  # not connected to DGE, use csv's in test directory
+                    logging.warning("Time series file not found for " + component_dict["name"] + ". Using time series files in test directory.")
+                    case_dict['input_path'] = "./test"
+                    ts_file = os.path.join(case_dict["input_path"],component_dict["time_series_file"])
+                    ts = process_time_series_file(ts_file, case_dict["datetime_start"], case_dict["datetime_end"])
 
                 if ts is not None:
                     # Include time series as snapshots taking every delta_t value
