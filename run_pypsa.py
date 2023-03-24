@@ -6,13 +6,9 @@ from utilities import read_excel_file_to_dict
 
 # Parse the input file as command line argument
 parser = argparse.ArgumentParser()
-import platform
-if platform.node() == 'Bills-P51':
-    input_file = 'test_case.xlsx'
-else:
-    parser.add_argument('-f', '--filename', help="Input csv case file", required=True)
-    args = parser.parse_args()
-    input_file = args.filename
+parser.add_argument('-f', '--filename', help="Input csv case file", required=True)
+args = parser.parse_args()
+input_file = args.filename
 
 """
 Check if directory exists, if not create it
