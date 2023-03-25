@@ -1,0 +1,19 @@
+# This file contains the default values for the cost calculations.
+
+rooftop_share: 0.14  # based on the potentials, assuming  (0.1 kW/m2 and 10 m2/person)
+fill_values:
+    FOM: 0
+    VOM: 0
+    efficiency: 1
+    fuel: 0
+    investment: 0
+    lifetime: 25
+    "CO2 intensity": 0
+    "discount rate": 0.07
+
+max_hours:
+    battery: 6
+    H2: 168
+
+#year for EUR outputs: 2015 is standard year in DEA, and DEA is NOT yet adjusted
+# DEA takes for solar PV eur_year 2020!

@@ -1,21 +1,16 @@
-import os, csv, pickle
-import argparse, logging
+import pickle
+import argparse,logging
 import pypsa
 import pandas as pd
-from utilities import read_excel_file_to_dict
+from utilities.read_input import read_input_file_to_dict
+from utilities.utilities import *
 
 # Parse the input file as command line argument
 parser = argparse.ArgumentParser()
-parser.add_argument('-f', '--filename', help="Input csv case file", required=True)
+parser.add_argument('-f', '--filename', help="Input case file (xlsx or csv)", required=True)
 args = parser.parse_args()
 input_file = args.filename
 
-"""
-Check if directory exists, if not create it
-"""
-def check_directory(directory):
-    if not os.path.exists(directory):
-        os.makedirs(directory)
 
 """
 Scale all float in component_list by a numerics_scaling excluding decay rate, efficiency and charging time
@@ -39,24 +34,10 @@ def divide_results_by_numeric_factor(df_dict, scaling_factor):
     return df_dict
 
 """
-Number of rows to skip until beginning of data in time series csv file
-"""
-def skip_until_begin_data(ts_file):
-    with open(ts_file) as fin:
-        # read to keyword 'BEGIN_DATA' and then one more line (header line)
-        data_reader = csv.reader(fin)
-        line_index = 1
-        while True:
-            line = next(data_reader)
-            if line[0] == 'BEGIN_DATA':
-                return line_index
-            else:
-                line_index += 1
-"""
 Read in time series file and format as pandas dataframe and return dataframe if not empty.
 """
 def process_time_series_file(ts_file, date_time_start, date_time_end):
-    skiprows = skip_until_begin_data(ts_file)
+    skiprows = skip_until_keyword(ts_file, 'BEGIN_DATA')
     ts = pd.read_csv(ts_file, parse_dates=False, sep=",", skiprows=skiprows)
     ts.columns = [x.lower() for x in ts.columns]
     ts['hour'] = ts['hour'] - 1  # convert MEM 1..24 to py 0..23
@@ -79,10 +60,7 @@ def add_buses_to_network(n, component_list):
     for component_dict in component_list:
         if "bus" in component_dict:
             if component_dict["bus"] not in n.buses.index:
-                if "co2" in component_dict["bus"]:
-                    n.add("Bus", component_dict["bus"], carrier="co2")
-                else:
-                    n.add("Bus", component_dict["bus"])
+                n.add("Bus", component_dict["bus"])
         if "bus1" in component_dict:
             if component_dict["bus1"] not in n.buses.index:
                 n.add("Bus", component_dict["bus1"])
@@ -103,14 +81,15 @@ def dicts_to_pypsa(case_dict, component_list, component_attr):
         if component_dict["component"] == "Generator" or component_dict["component"] == "Load":
             # Add time series to components
             if "time_series_file" in component_dict:
-                input_file = os.path.join(case_dict["input_path"],component_dict["time_series_file"])
+                ts_file = os.path.join(case_dict["input_path"],component_dict["time_series_file"])
                 try:
-                    ts = process_time_series_file(input_file, case_dict["datetime_start"], case_dict["datetime_end"])
+                    ts = process_time_series_file(ts_file, case_dict["datetime_start"], case_dict["datetime_end"])
                 except Exception:  # not connected to DGE, use csv's in test directory
+                    logging.warning("Time series file not found for " + component_dict["name"] + ". Using time series files in test directory.")
                     case_dict['input_path'] = "./test"
-                    input_file = os.path.join(case_dict["input_path"],component_dict["time_series_file"])
-                    ts = process_time_series_file(input_file, case_dict["datetime_start"], case_dict["datetime_end"])
-                    
+                    ts_file = os.path.join(case_dict["input_path"],component_dict["time_series_file"])
+                    ts = process_time_series_file(ts_file, case_dict["datetime_start"], case_dict["datetime_end"])
+
                 if ts is not None:
                     # Include time series as snapshots taking every delta_t value
                     n.snapshots = ts.iloc[::case_dict['delta_t'], :].index if case_dict['delta_t'] else ts.index
@@ -128,9 +107,16 @@ def dicts_to_pypsa(case_dict, component_list, component_attr):
                     continue
 
         # Add p_nom_extendable attribute to generators, storages and links if p_nom is not defined
-        if component_dict["component"] == "Generator" or component_dict["component"] == "StorageUnit" or component_dict["component"] == "Link":
+        if component_dict["component"] in ["Generator", "StorageUnit", "Link"]:
             if "p_nom" not in component_dict:
                 component_dict["p_nom_extendable"] = True
+        elif component_dict["component"] == "Store":
+                if "e_nom" not in component_dict:
+                    component_dict["e_nom_extendable"] = True
+
+        # Default carrier to component name if not defined
+        if "carrier" not in component_dict:
+            component_dict["carrier"] = component_dict["name"]
 
         # Add components to network based on component_dict as attributes for network add function, excluding "component" and "name"
         n.add(component_dict["component"], component_dict["name"], **{k: v for k, v in component_dict.items() if k != "component" and k != "name"})
@@ -186,6 +172,12 @@ def postprocess_results(n, case_dict):
     time_results_df = pd.concat([time_results_df, n.storage_units_t["state_of_charge"].rename(columns=dict(
         zip(n.storage_units_t["state_of_charge"].columns.to_list(),
             [name + " state of charge" for name in n.storage_units_t["state_of_charge"].columns.to_list()])))], axis=1)
+    time_results_df = pd.concat([time_results_df, n.stores_t["e"].rename(columns=dict(
+        zip(n.stores_t["e"].columns.to_list(),
+            [name + " state of charge" for name in n.stores_t["e"].columns.to_list()])))], axis=1)
+    time_results_df = pd.concat([time_results_df, n.links_t["p0"].rename(columns=dict(
+        zip(n.links_t["p0"].columns.to_list(),
+            [name + " dispatch" for name in n.links_t["p0"].columns.to_list()])))], axis=1)
 
     # Collect objective and system cost in one dataframe
     system_cost = n.statistics()["Capital Expenditure"].sum() / case_dict["total_hours"] + n.statistics()[
@@ -203,8 +195,8 @@ def postprocess_results(n, case_dict):
 
 
 def main():
-    # Read in xlsx case input file and translate to dictionaries
-    case_dict, component_list, component_attributes = read_excel_file_to_dict(input_file)
+    # Read in case input file and translate to dictionaries
+    case_dict, component_list, component_attributes = read_input_file_to_dict(input_file)
 
     # Define PyPSA network
     network = dicts_to_pypsa(case_dict, component_list, component_attributes)
@@ -217,7 +209,6 @@ def main():
 
     # Write results to excel file
     write_results_to_file(case_dict, output_df_dict)
-
 
 if __name__ == "__main__":
     main()
