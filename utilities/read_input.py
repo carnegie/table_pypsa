@@ -147,8 +147,15 @@ def read_input_file_to_dict(file_name):
     # Number of full years between two datetimes given as strings
     nyears = (datetime.strptime(case_data_dict["datetime_end"], "%Y-%m-%d %H:%M:%S") - datetime.strptime(
         case_data_dict["datetime_start"], "%Y-%m-%d %H:%M:%S")).days // 365
+    # Config file path
+    if os.getcwd().split('/')[-1] == 'clab_pypsa':
+        config_file_path = os.getcwd() + '/utilities/cost_config.yaml'
+    elif os.path.isdir(os.getcwd() + '/clab_pypsa'):
+        config_file_path = os.getcwd() + '/clab_pypsa/utilities/cost_config.yaml'
+    else:
+        logging.error('Current directory is not clab_pypsa and clab directory is not in current directory.')
     # Load PyPSA costs
-    costs = load_costs(tech_costs=case_data_dict["costs_path"], config="./utilities/cost_config.yaml", Nyears=nyears)
+    costs = load_costs(tech_costs=case_data_dict["costs_path"], config=config_file_path, Nyears=nyears)
 
     # create list of dictionaries of component data
     attributes = component_data[0] 
