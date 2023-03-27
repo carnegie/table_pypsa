@@ -96,7 +96,7 @@ def define_special_attributes(comp, attr):
 Read in component data
 """
 def read_component_data(comp_dict, attr, val, technology, costs_df):
-    sign = 1
+    factor = 1
     # if value is a number or name, read that.
     # if it's empty or a cost name, use read_attr to get the value from the costs dataframe.
     if attr != None:
@@ -106,18 +106,17 @@ def read_component_data(comp_dict, attr, val, technology, costs_df):
             read_attr = None
         # if otherwise value is a string, use that as read attr
         elif type(val) is str:
-            if val[0] == '-':
-                sign = -1
-                val = val[1:]
+            if '*' in val:
+                factor = float(val.split('*')[0])
+                val = val.split('*')[1]
             read_attr = val
         # if value is empty, use attr as read attr
         else:
             read_attr = attr
-
         # if read_attr is defined, use it to get the value from the costs dataframe
         if (read_attr != None and read_attr in costs_df.columns and technology in costs_df.index):
-            comp_dict[attr] = costs_df.loc[technology, read_attr] * sign
-            logging.info('Using default value for ' + comp_dict["component"] + ' "' + technology + '" for ' + attr
+            comp_dict[attr] = costs_df.loc[technology, read_attr] * factor
+            logging.info('Using default value for ' + comp_dict["component"] + ' "' + comp_dict["name"] + '" for ' + attr
                          + ' = ' + str(comp_dict[attr]))
     return comp_dict
 
