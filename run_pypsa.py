@@ -5,13 +5,6 @@ import pandas as pd
 from utilities.read_input import read_input_file_to_dict
 from utilities.utilities import *
 
-# Parse the input file as command line argument
-parser = argparse.ArgumentParser()
-parser.add_argument('-f', '--filename', help="Input case file (xlsx or csv)", required=True)
-args = parser.parse_args()
-input_file = args.filename
-
-
 """
 Scale all float in component_list by a numerics_scaling excluding decay rate, efficiency and charging time
 """
@@ -125,7 +118,7 @@ def dicts_to_pypsa(case_dict, component_list, component_attr):
 """
 Write results to excel file and pickle file
 """
-def write_results_to_file(case_dict, df_dict):
+def write_results_to_file(infile, case_dict, df_dict):
 
     # Write results to excel file
     check_directory(case_dict["output_path"])
@@ -133,6 +126,9 @@ def write_results_to_file(case_dict, df_dict):
     output_file = os.path.join(case_dict["output_path"], case_dict["case_name"], case_dict["filename_prefix"])
 
     with pd.ExcelWriter(output_file+".xlsx") as writer:
+        # Copy infile to first sheet of output file
+        input_df = pd.read_excel(infile)
+        input_df.to_excel(writer, sheet_name="Input")
         for results in df_dict:
             df_dict[results].to_excel(writer, sheet_name=results)
 
@@ -194,9 +190,9 @@ def postprocess_results(n, case_dict):
     return df_dict
 
 
-def main():
+def run_pypsa(infile):
     # Read in case input file and translate to dictionaries
-    case_dict, component_list, component_attributes = read_input_file_to_dict(input_file)
+    case_dict, component_list, component_attributes = read_input_file_to_dict(infile)
 
     # Define PyPSA network
     network = dicts_to_pypsa(case_dict, component_list, component_attributes)
@@ -208,7 +204,14 @@ def main():
     output_df_dict = postprocess_results(network, case_dict)
 
     # Write results to excel file
-    write_results_to_file(case_dict, output_df_dict)
+    write_results_to_file(infile, case_dict, output_df_dict)
 
 if __name__ == "__main__":
-    main()
+
+    # Parse the input file as command line argument
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-f', '--filename', help="Input case file (xlsx or csv)", required=True)
+    args = parser.parse_args()
+    input_file = args.filename
+
+    run_pypsa(input_file)
