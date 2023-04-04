@@ -53,6 +53,11 @@ In a new repository add clab_pypsa as a submodule with (this will follow the mai
 
 ```git submodule add -b main https://github.com/carnegie/clab_pypsa```
 
+Make sure to update the submodule regularly by doing
+
+```git submodule update --remote --recursive```
+
+#
 To run PyPSA in that repository, then run
 
 ```python clab_pypsa/run_pypsa.py -f <path_to_your_case_file>```
