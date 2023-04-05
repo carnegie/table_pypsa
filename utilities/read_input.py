@@ -151,7 +151,6 @@ def read_input_file_to_dict(file_name):
         config_file_path = os.getcwd() + '/utilities/cost_config.yaml'
     elif '\\' in os.getcwd() and os.getcwd().split('\\')[-1] == 'clab_pypsa':  # allow for windows path
         config_file_path = os.getcwd() + '\\utilities\\cost_config.yaml'
-        print('155 config_file_path:', config_file_path, '\n')
     elif os.path.isdir(os.getcwd() + '/clab_pypsa'):
         config_file_path = os.getcwd() + '/clab_pypsa/utilities/cost_config.yaml'
     else:
