@@ -46,14 +46,6 @@ jobs:
       run:
         python run_pypsa.py -f test/test_case.xlsx
         
-    - name: Archive production artifacts
-      uses: actions/upload-artifact@v3
-      with:
-        name: dist-without-markdown
-        path: |
-          dist
-          !dist/**/*.md
-    
     - name: Save xlsx artifact
       uses: actions/upload-artifact@v3
       with:
