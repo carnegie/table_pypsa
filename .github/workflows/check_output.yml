@@ -52,9 +52,9 @@ jobs:
         name: output_xlsx
         path: output_data/test_case/test_prefix.xlsx
         
-#    - name: compare output
-#      run:
-#        python test/test_compare_output.py
+    - name: compare output
+      run:
+        python test/test_compare_output.py
 
     # Uncomment this section to upload output file(s) at the end of this job
     #- uses: actions/upload-artifact@v3
