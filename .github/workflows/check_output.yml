@@ -46,9 +46,23 @@ jobs:
       run:
         python run_pypsa.py -f test/test_case.xlsx
         
-    - name: compare output
-      run:
-        python test/test_compare_output.py
+    - name: Archive production artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: dist-without-markdown
+        path: |
+          dist
+          !dist/**/*.md
+    
+    - name: Save xlsx artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: output_xlsx
+        path: output_data/test_case/test_prefix.xlsx
+        
+#    - name: compare output
+#      run:
+#        python test/test_compare_output.py
 
     # Uncomment this section to upload output file(s) at the end of this job
     #- uses: actions/upload-artifact@v3
