@@ -147,8 +147,11 @@ def read_input_file_to_dict(file_name):
     nyears = (datetime.strptime(case_data_dict["datetime_end"], "%Y-%m-%d %H:%M:%S") - datetime.strptime(
         case_data_dict["datetime_start"], "%Y-%m-%d %H:%M:%S")).days // 365
     # Config file path
-    if os.getcwd().split('/')[-1] == 'clab_pypsa':
+    if '/' in os.getcwd() and os.getcwd().split('/')[-1] == 'clab_pypsa':  # if unix path
         config_file_path = os.getcwd() + '/utilities/cost_config.yaml'
+    elif '\\' in os.getcwd() and os.getcwd().split('\\')[-1] == 'clab_pypsa':  # allow for windows path
+        config_file_path = os.getcwd() + '\\utilities\\cost_config.yaml'
+        print('155 config_file_path:', config_file_path, '\n')
     elif os.path.isdir(os.getcwd() + '/clab_pypsa'):
         config_file_path = os.getcwd() + '/clab_pypsa/utilities/cost_config.yaml'
     else:
