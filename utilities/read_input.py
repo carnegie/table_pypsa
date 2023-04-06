@@ -101,7 +101,7 @@ def read_component_data(comp_dict, attr, val, technology, costs_df):
     # if it's empty or a cost name, use read_attr to get the value from the costs dataframe.
     if attr != None:
         # if "name", "bus", or "time_series_file" is in attr or value can be converted to a float, use that
-        if (val != None and (any(x in attr for x in ['name', 'bus', 'time_series_file']) or is_number(val))):
+        if (val != None and (any(x in attr for x in ['name', 'bus', 'carrier', 'time_series_file']) or is_number(val))):
             comp_dict[attr] = val
             read_attr = None
         # if otherwise value is a string, use that as read attr

@@ -118,17 +118,20 @@ def dicts_to_pypsa(case_dict, component_list, component_attr):
 """
 Write results to excel file and pickle file
 """
-def write_results_to_file(infile, case_dict, df_dict):
+def write_results_to_file(infile, case_input_dict, component_input_list, df_dict):
 
     # Write results to excel file
-    check_directory(case_dict["output_path"])
-    check_directory(os.path.join(case_dict["output_path"], case_dict["case_name"]))
-    output_file = os.path.join(case_dict["output_path"], case_dict["case_name"], case_dict["filename_prefix"])
+    check_directory(case_input_dict["output_path"])
+    check_directory(os.path.join(case_input_dict["output_path"], case_input_dict["case_name"]))
+    output_file = os.path.join(case_input_dict["output_path"], case_input_dict["case_name"], case_input_dict["filename_prefix"])
 
     with pd.ExcelWriter(output_file+".xlsx") as writer:
         # Copy infile to first sheet of output file
         input_df = pd.read_excel(infile)
-        input_df.to_excel(writer, sheet_name="Input")
+        input_df.to_excel(writer, sheet_name="input file")
+        # Write component list to excel file which includes the cost values
+        pd.DataFrame(component_input_list).to_excel(writer, sheet_name="component inputs")
+        # Write results to excel file
         for results in df_dict:
             df_dict[results].to_excel(writer, sheet_name=results)
 
@@ -204,7 +207,7 @@ def run_pypsa(infile):
     output_df_dict = postprocess_results(network, case_dict)
 
     # Write results to excel file
-    write_results_to_file(infile, case_dict, output_df_dict)
+    write_results_to_file(infile, case_dict, component_list, output_df_dict)
 
 if __name__ == "__main__":
 
