@@ -2,6 +2,10 @@ import pickle
 import argparse,logging
 import pypsa
 import pandas as pd
+
+# import always relative to the current file
+import os, sys
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 from utilities.read_input import read_input_file_to_dict
 from utilities.utilities import *
 
@@ -118,14 +122,9 @@ def dicts_to_pypsa(case_dict, component_list, component_attr):
 """
 Write results to excel file and pickle file
 """
-def write_results_to_file(infile, case_input_dict, component_input_list, df_dict):
-
+def write_results_to_file(infile, outfile, component_input_list, df_dict):
     # Write results to excel file
-    check_directory(case_input_dict["output_path"])
-    check_directory(os.path.join(case_input_dict["output_path"], case_input_dict["case_name"]))
-    output_file = os.path.join(case_input_dict["output_path"], case_input_dict["case_name"], case_input_dict["filename_prefix"])
-
-    with pd.ExcelWriter(output_file+".xlsx") as writer:
+    with pd.ExcelWriter(outfile+".xlsx") as writer:
         # Copy infile to first sheet of output file
         input_df = pd.read_excel(infile)
         input_df.to_excel(writer, sheet_name="input file")
@@ -136,12 +135,12 @@ def write_results_to_file(infile, case_input_dict, component_input_list, df_dict
             df_dict[results].to_excel(writer, sheet_name=results)
 
     # Write results to pickle file
-    with open(output_file+".pickle", 'wb') as f:
+    with open(outfile+".pickle", 'wb') as f:
         pickle.dump(df_dict, f)
 
     # Logging info
-    logging.info("Results written to file: " + output_file + ".xlsx")
-    logging.info("Results written to file: " + output_file + ".pickle")
+    logging.info("Results written to file: " + outfile + ".xlsx")
+    logging.info("Results written to file: " + outfile + ".pickle")
 
 """
 Postprocess results and collect in dataframes
@@ -193,21 +192,26 @@ def postprocess_results(n, case_dict):
     return df_dict
 
 
-def run_pypsa(infile):
+def build_network(infile):
     # Read in case input file and translate to dictionaries
     case_dict, component_list, component_attributes = read_input_file_to_dict(infile)
 
     # Define PyPSA network
     network = dicts_to_pypsa(case_dict, component_list, component_attributes)
 
+    return network, case_dict, component_list
+
+def run_pypsa(network, infile, case_dict, component_list, outfile_suffix=""):
     # Solve the linear optimization power flow with Gurobi
-    network.lopf(solver_name='gurobi')
+    network.optimize(solver_name='gurobi')
 
     # Postprocess results and write to excel, pickle
     output_df_dict = postprocess_results(network, case_dict)
 
-    # Write results to excel file
-    write_results_to_file(infile, case_dict, component_list, output_df_dict)
+    # Get output path and filename
+    output_file = get_output_filename(case_dict) + "_" + outfile_suffix
+    # Write results to file
+    write_results_to_file(infile, output_file, component_list, output_df_dict)
 
 if __name__ == "__main__":
 
@@ -217,4 +221,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
     input_file = args.filename
 
-    run_pypsa(input_file)
+    # Run PyPSA
+    n, c_dict, comp_list = build_network(input_file)
+    run_pypsa(n, input_file, c_dict, comp_list)
