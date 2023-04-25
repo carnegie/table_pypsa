@@ -12,12 +12,12 @@ from utilities.utilities import *
 """
 Scale all float in component_list by a numerics_scaling excluding decay rate, efficiency and charging time
 """
-def scale_normalize_time_series(scale_factor, component_dict):
+def normalize_time_series(component_dict):
     # Scale all pandas series in component_list by numerics_scaling and normalize by normalization factor
     for key in component_dict:
-        if type(component_dict[key]) is pd.Series or "cost" in key:
+        if type(component_dict[key]) is pd.Series:
             normalization = component_dict['normalization'] / component_dict[key].mean() if 'normalization' in component_dict else 1.
-            component_dict[key] = component_dict[key] * scale_factor * normalization
+            component_dict[key] = component_dict[key] * normalization
     return component_dict
 
 """
@@ -26,7 +26,7 @@ Divide all dataframes in df_dict values by numerics_scaling if dataframe column 
 def divide_results_by_numeric_factor(df_dict, scaling_factor):
     for results in df_dict:
         for col in df_dict[results].columns:
-            if not "capacity factor" in col.lower():
+            if "revenue" in col.lower():
                 df_dict[results][col] = df_dict[results][col] / scaling_factor
     return df_dict
 
@@ -98,7 +98,7 @@ def dicts_to_pypsa(case_dict, component_list, component_attr):
                     # Remove time_series_file from component_dict
                     component_dict.pop("time_series_file")
                     # Scale by numerics_scaling, this avoids rounding otherwise done in Gurobi for small numbers and normalize time series
-                    component_dict = scale_normalize_time_series(case_dict["numerics_scaling"], component_dict)
+                    component_dict = normalize_time_series(component_dict)
                 else:
                     logging.warning("Time series file not found for " + component_dict["name"] + ". Skipping component.")
                     continue
@@ -201,15 +201,24 @@ def build_network(infile):
 
     return network, case_dict, component_list
 
+def optimize_network(n, solver, scaling_factor=1.):
+    # Solve the linear optimization power flow with Gurobi
+    if scaling_factor != 1.:
+        logging.warning("Scaling factor is not 1.0, scaling objective function accordingly. Use with caution! Still experimental!")
+    n.optimize.create_model()
+    n.model.objective = scaling_factor * n.model.objective
+    n.optimize.solve_model(solver_name=solver)
+    return n
+
 def run_pypsa(network, infile, case_dict, component_list, outfile_suffix=""):
     # Solve the linear optimization power flow with Gurobi
-    network.optimize(solver_name='gurobi')
+    network = optimize_network(network, case_dict["solver"], case_dict["numerics_scaling"])
 
     # Postprocess results and write to excel, pickle
     output_df_dict = postprocess_results(network, case_dict)
 
     # Get output path and filename
-    output_file = get_output_filename(case_dict) + "_" + outfile_suffix
+    output_file = get_output_filename(case_dict) + outfile_suffix
     # Write results to file
     write_results_to_file(infile, output_file, component_list, output_df_dict)
 

@@ -24,16 +24,17 @@ with --recursive (this clones PyPSA as a submodule ), for example
 ```git clone https://github.com/carnegie/clab_pypsa --recursive```
 
 #
-## Data input files
+## Install dependencies in the environment
 
-The data input files are in the [Carnegie storage](https://carnegiescience.freshservice.com/support/solutions/articles/3000028580-data-storage-strategy) `data`. 
-The files can for example be accessed through
+When you're running for the first time, create a new environment with
 
-```ssh username@dtn.dge.carnegiescience.edu```
+```conda env create -f env.yaml```
 
-The data files are in the format of csv files. The data directory is:
+Then activate the environment with
 
-```/carnegie/data/Shared/Labs/Caldeira Lab/Everyone/energy_demand_capacity_data/test_case_solar_wind_demand```
+```conda activate pypsa_table```
+
+every time you want to run pypsa_table.
 
 #
 ## Run PyPSA
