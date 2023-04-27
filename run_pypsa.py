@@ -26,7 +26,7 @@ Divide all dataframes in df_dict values by numerics_scaling if dataframe column 
 def divide_results_by_numeric_factor(df_dict, scaling_factor):
     for results in df_dict:
         for col in df_dict[results].columns:
-            if "revenue" in col.lower():
+            if "revenue" in col.lower() or "objective"  in col.lower():
                 df_dict[results][col] = df_dict[results][col] / scaling_factor
     return df_dict
 
