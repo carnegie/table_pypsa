@@ -86,3 +86,9 @@ def skip_until_keyword(ts_file, keyword):
                 return line_index
             else:
                 line_index += 1
+
+def get_output_filename(case_input_dict):
+    check_directory(case_input_dict["output_path"])
+    check_directory(os.path.join(case_input_dict["output_path"], case_input_dict["case_name"]))
+    outfile = os.path.join(case_input_dict["output_path"], case_input_dict["case_name"], case_input_dict["filename_prefix"])
+    return outfile

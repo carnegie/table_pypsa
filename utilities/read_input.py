@@ -67,9 +67,11 @@ def update_component_attribute_dict(attributes_from_file):
             component_attribute_dict["Link"].loc["efficiency{0}".format(ibus)] = ["static or series", "per unit", 1.0, "bus {0} efficiency".format(ibus), "Input (optional)"]
             component_attribute_dict["Link"].loc["p{0}".format(ibus)] = ["series", "MW", 0.0, "bus {0} output".format(ibus), "Output", ]
 
+    # Add attributes for components that are not in default PyPSA
     for component_type in ['Load','Generator']:
         component_attribute_dict[component_type].loc["time_series_file"] = ["string", np.nan, np.nan, "time series file", "Input (optional)"]
         component_attribute_dict[component_type].loc["normalization"] = ["string", np.nan, np.nan, "normalization", "Input (optional)"]
+
     return component_attribute_dict
 
 """
@@ -101,7 +103,7 @@ def read_component_data(comp_dict, attr, val, technology, costs_df):
     # if it's empty or a cost name, use read_attr to get the value from the costs dataframe.
     if attr != None:
         # if "name", "bus", or "time_series_file" is in attr or value can be converted to a float, use that
-        if (val != None and (any(x in attr for x in ['name', 'bus', 'time_series_file']) or is_number(val))):
+        if (val != None and (any(x in attr for x in ['name', 'bus', 'carrier', 'time_series_file']) or is_number(val))):
             comp_dict[attr] = val
             read_attr = None
         # if otherwise value is a string, use that as read attr
