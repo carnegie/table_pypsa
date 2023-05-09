@@ -30,7 +30,7 @@ def load_costs(tech_costs, config, Nyears=1.0):
     # Load config files
     import os
     print('32: config:', config)
-    print('33: /home/runner/work contents:', os.listdir('home/runner/work'))
+    print('33: /home/runner/work contents:', os.listdir('/home/runner/work'))
     print('34: clab_pypsa dir:', os.listdir('/home/runner/work/clab_pypsa'))
     print()
     print('36: utilities dir:', os.listdir('/home/runner/work/clab_pypsa/utilities'))
