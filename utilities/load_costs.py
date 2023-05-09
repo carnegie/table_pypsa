@@ -29,7 +29,17 @@ def load_costs(tech_costs, config, Nyears=1.0):
 
     # Load config files
     with open(config, "r") as f:
-        config = yaml.safe_load(f)
+        try:  # TEMP 9may23 debug why doesn't find .yaml file
+            config = yaml.safe_load(f)
+        except Exception as e:
+            print("35: EXC", e)
+            print('  config:', config)
+            import os
+            print('37: cwd:', os.getcwd())
+            print('-- cwd files --')
+            for fname in os.listdir():
+                print('  ', fname)
+            print('-----------------')
 
     # correct units to MW
     costs.loc[costs.unit.str.contains("/kW"), "value"] *= 1e3
