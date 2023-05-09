@@ -31,7 +31,8 @@ def load_costs(tech_costs, config, Nyears=1.0):
     import os
     print('32: config:', config)
     print('33: /home/runner/work contents:', os.listdir('/home/runner/work'))
-    print('34: clab_pypsa dir:', os.listdir('/home/runner/work/clab_pypsa'))
+    print('34: /home/runner/work/clab_pypsa contents:', os.listdir('/home/runner/work/clab_pypsa'))
+    print('35: /home/runner/work/clab_pypsa/clab_pypsa contents:', os.listdir('/home/runner/work/clab_pypsa/clab_pypsa'))
     print()
     print('36: utilities dir:', os.listdir('/home/runner/work/clab_pypsa/utilities'))
     try:  # TEMP 9may23 debug why doesn't find .yaml file
@@ -45,6 +46,8 @@ def load_costs(tech_costs, config, Nyears=1.0):
         for fname in os.listdir():
             print('  ', fname)
         print('-----------------')
+        import sys
+        sys.exit()
 
     # correct units to MW
     costs.loc[costs.unit.str.contains("/kW"), "value"] *= 1e3
