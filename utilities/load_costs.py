@@ -29,14 +29,16 @@ def load_costs(tech_costs, config, Nyears=1.0):
 
     # Load config files
     import os
-    print('32: clab_pypsa dir:', os.listdir('/home/runner/work/clab_pypsa'))
+    print('32: config:', config)
+    print('33: /home/runner/work contents:', os.listdir('home/runner/work'))
+    print('34: clab_pypsa dir:', os.listdir('/home/runner/work/clab_pypsa'))
     print()
-    print('34: utilities dir:', os.listdir('/home/runner/work/clab_pypsa/utilities'))
+    print('36: utilities dir:', os.listdir('/home/runner/work/clab_pypsa/utilities'))
     try:  # TEMP 9may23 debug why doesn't find .yaml file
         with open(config, "r") as f:
             config = yaml.safe_load(f)
     except Exception as e:
-        print("35: EXC", e)
+        print("40: EXC", e)
         print('  config:', config)
         print('37: cwd:', os.getcwd())
         print('-- cwd files --')
