@@ -28,18 +28,13 @@ def load_costs(tech_costs, config, Nyears=1.0):
     costs = pd.read_csv(tech_costs, index_col=[0, 1]).sort_index()
 
     # Load config files
-    import os
     print('32: config:', config)
-    print('33: /home/runner/work contents:', os.listdir('/home/runner/work'))
-    print('34: /home/runner/work/clab_pypsa contents:', os.listdir('/home/runner/work/clab_pypsa'))
-    print('35: /home/runner/work/clab_pypsa/clab_pypsa contents:', os.listdir('/home/runner/work/clab_pypsa/clab_pypsa'))
-    print()
-    print('36: utilities dir:', os.listdir('/home/runner/work/clab_pypsa/utilities'))
-    try:  # TEMP 9may23 debug why doesn't find .yaml file
+    try:
         with open(config, "r") as f:
             config = yaml.safe_load(f)
     except Exception as e:
-        print("40: EXC", e)
+        import os
+        print("37: EXC", e)
         print('  config:', config)
         print('37: cwd:', os.getcwd())
         print('-- cwd files --')
