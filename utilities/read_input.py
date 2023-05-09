@@ -1,19 +1,20 @@
 """
 Utility functions for process_input
 """
-
 import numpy as np
-import openpyxl
 import logging
 import pypsa
 from utilities.load_costs import load_costs
-from utilities.utilities import *
+from utilities.utilities import is_number, remove_empty_rows, find_first_row_with_keyword, check_attributes, concatenate_list_of_strings
 from datetime import datetime
+from pathlib import Path
+import pandas as pd
 
-"""
-Read in PyPSA input file (either csv or excel[xlsx or xls]) into a list of lists
-"""
+
 def read_pypsa_input_file(file_name):
+    """ file_name: str, case file path 
+        return a list of lists of data from the PyPSA case .csv or .xlsx
+    """
     if file_name.endswith('.csv'):
         return read_csv_file(file_name)
     elif file_name.endswith('.xlsx') or file_name.endswith('.xls'):
@@ -22,39 +23,57 @@ def read_pypsa_input_file(file_name):
         print ('file name must end with .csv, .xlsx, or .xls')
         return None
 
-"""
-Read in csv file into a list of lists
-"""
+
 def read_csv_file(file_name):
-    with open(file_name, 'r') as f:
-        csv_list = []
-        for line in f:
-            csv_list.append(line.split(','))
-    # replace empty strings with None
-    for i in range(len(csv_list)):
-        for j in range(len(csv_list[i])):
-            if csv_list[i][j] == '' or csv_list[i][j] == '\n':
-                csv_list[i][j] = None
+    """ Read csv case file into a list of lists of cell values
+        Convert numbers to int or float, booleans to True or False, blanks to None
+    """
+    df = pd.read_csv(file_name, header=None)
+    csv_list_with_nan = df.values.tolist()
+    # convert np.nan to None
+    csv_list = []
+    for row in csv_list_with_nan:
+        new_list = []
+        for value in row:
+            if value in [np.nan,'','\n']:
+                new_list.append(None)
+            elif value.lower() == 'true':
+                new_list.append(True)
+            elif value.lower() == 'false':
+                new_list.append(False)
+            else:
+                # try converting to int or float
+                try:
+                    new_list.append(int(value))
+                except Exception:
+                    try:
+                        new_list.append(float(value))
+                    except Exception:
+                        new_list.append(value)  # leave value as is
+        csv_list.append(new_list)
     return csv_list
 
-"""
-Read in first sheet of an excel file into a list of lists using openpyxl
-"""
+
 def read_excel_file(file_name):
-    workbook = openpyxl.load_workbook(file_name, data_only=True)
-    worksheet = workbook.active
+    """
+    Read in first sheet of an excel file into a list of lists using Pandas
+    """
+    df_worksheet = pd.read_excel(file_name, header=None)
+    list_of_lists_with_nan = df_worksheet.values.tolist()
+    # convert np.nan to None
     list_of_lists = []
-    for row in worksheet.iter_rows():
-        row_list = []
-        for cell in row:
-            row_list.append(cell.value)
-        list_of_lists.append(row_list)
+    for row in list_of_lists_with_nan:
+        new_list = []  # with None instead of np.nan
+        for value in row:
+            new_list.append(None if value is np.nan else value)
+        list_of_lists.append(new_list)
     return list_of_lists
 
-"""
-Create dictionary of allowable attributes for each component type
-"""
+
 def update_component_attribute_dict(attributes_from_file):
+    """
+    Create dictionary of allowable attributes for each component type
+    """
     component_attribute_dict = pypsa.descriptors.Dict({k: v.copy() for k, v in pypsa.components.component_attrs.items()})
 
     bus_numbers = [int(bus.replace("bus","")) for bus in attributes_from_file if bus is not None and bus.startswith('bus') and bus != 'bus']
@@ -74,10 +93,9 @@ def update_component_attribute_dict(attributes_from_file):
 
     return component_attribute_dict
 
-"""
-Define special attributes for some components
-"""
+
 def define_special_attributes(comp, attr):
+    """ return optionally updated attr based on component data """
     # for link replace 'bus' with 'bus0'
     if comp == 'Link':
         use_attr = list(attr)
@@ -94,10 +112,11 @@ def define_special_attributes(comp, attr):
         use_attr = attr
     return use_attr
 
-"""
-Read in component data
-"""
+
 def read_component_data(comp_dict, attr, val, technology, costs_df):
+    """
+    Read in one row of component data and update the comp_dict
+    """
     factor = 1
     # if value is a number or name, read that.
     # if it's empty or a cost name, use read_attr to get the value from the costs dataframe.
@@ -122,11 +141,41 @@ def read_component_data(comp_dict, attr, val, technology, costs_df):
                          + ' = ' + str(comp_dict[attr]))
     return comp_dict
 
-""""
-Code to read in an excel or csv file, create a dictionary from the 'case_data' section, 
-and a list of dictionaries from the 'component_data' section
-"""
+
+def convert_slash_to_dash_dates(s):
+    """ s: 'mm/dd/yyyy 0:00:00'  from csv case file
+        return 'yyyy-mm-dd <time>:00'
+    """
+    parts = s.split()
+    # convert date
+    if '/' in parts[0]:
+        old = parts[0]
+        mm,dd,yyyy = old.split('/')
+        if len(mm)==1:
+            mm = '0' + mm
+        if len(dd)==1:
+            dd = '0' + dd
+        parts[0] = '-'.join([yyyy,mm,dd])
+    
+    # convert time
+    time = parts[1]
+    if time.count(':')==1:
+        parts[1] = time + ':00'  # add seconds
+        
+    return ' '.join(parts)
+
+
 def read_input_file_to_dict(file_name):
+    """"
+    file_name:  str, case file 
+    Code to read in an excel or csv case file
+    return a dictionary from the CASE_DATA section: 
+        case_data_dict: keys: col A, values: col B
+    return a list of dictionaries (one per row) from the COMPONENT_DATA section: 
+        component_attribute_dictionary: keys: col names from first row, values: cell values
+    return component_attribute_dictionary: a pypsa.descriptors dict
+    """
+    
     # read in excel file describing case and component data
     worksheet = read_pypsa_input_file(file_name) # worksheet is a list of lists
     worksheet = remove_empty_rows(worksheet)
@@ -146,17 +195,26 @@ def read_input_file_to_dict(file_name):
     logging.basicConfig(level=case_data_dict["logging_level"].upper())
 
     # Number of full years between two datetimes given as strings
+    # convert date format if necessary
+    if '/' in case_data_dict['datetime_end']:
+        case_data_dict['datetime_end'] = convert_slash_to_dash_dates(case_data_dict['datetime_end'])
+    if '/' in case_data_dict['datetime_start']:
+        case_data_dict['datetime_start'] = convert_slash_to_dash_dates(case_data_dict['datetime_start'])
     nyears = (datetime.strptime(case_data_dict["datetime_end"], "%Y-%m-%d %H:%M:%S") - datetime.strptime(
         case_data_dict["datetime_start"], "%Y-%m-%d %H:%M:%S")).days // 365
     # Config file path
-    if '/' in os.getcwd() and os.getcwd().split('/')[-1] == 'clab_pypsa':  # if unix path
-        config_file_path = os.getcwd() + '/utilities/cost_config.yaml'
-    elif '\\' in os.getcwd() and os.getcwd().split('\\')[-1] == 'clab_pypsa':  # allow for windows path
-        config_file_path = os.getcwd() + '\\utilities\\cost_config.yaml'
-    elif os.path.isdir(os.getcwd() + '/clab_pypsa'):
-        config_file_path = os.getcwd() + '/clab_pypsa/utilities/cost_config.yaml'
+    cwd = Path.cwd()
+    # in case we're running an executable in clab_pypsa/dist/run_pypsa
+
+    if 'clab_pypsa' in cwd.parts:
+        clab_pypsa_index = cwd.parts.index('clab_pypsa')
+        path_to_clab_pypsa = Path(*cwd.parts[:clab_pypsa_index+1])
+        config_file_path = str(path_to_clab_pypsa / 'utilities' / 'cost_config.yaml')
+    elif 'clab_pypsa_optimizations' in cwd.parts:  # 8may23 to get this to run in DGE_clab_pypsa/clab_pypsa_optimizations
+        config_file_path = str(cwd / 'utilities' / 'cost_config.yaml')
     else:
         logging.error('Current directory is not clab_pypsa and clab directory is not in current directory.')
+
     # Load PyPSA costs
     costs = load_costs(tech_costs=case_data_dict["costs_path"], config=config_file_path, Nyears=nyears)
 

@@ -7,12 +7,13 @@ import pandas as pd
 import os, sys
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 from utilities.read_input import read_input_file_to_dict
-from utilities.utilities import *
+from utilities.utilities import skip_until_keyword, get_output_filename
 
-"""
-Scale all float in component_list by a numerics_scaling excluding decay rate, efficiency and charging time
-"""
+
 def normalize_time_series(component_dict):
+    """
+    Scale all float in component_list by a numerics_scaling excluding decay rate, efficiency and charging time
+    """
     # Scale all pandas series in component_list by numerics_scaling and normalize by normalization factor
     for key in component_dict:
         if type(component_dict[key]) is pd.Series:
@@ -20,20 +21,22 @@ def normalize_time_series(component_dict):
             component_dict[key] = component_dict[key] * normalization
     return component_dict
 
-"""
-Divide all dataframes in df_dict values by numerics_scaling if dataframe column has "cost", "$" or "Expenditure" in name
-"""
+
 def divide_results_by_numeric_factor(df_dict, scaling_factor):
+    """
+    Divide all dataframes in df_dict values by numerics_scaling if dataframe column has "cost", "$" or "Expenditure" in name
+    """
     for results in df_dict:
         for col in df_dict[results].columns:
             if "revenue" in col.lower() or "objective"  in col.lower():
                 df_dict[results][col] = df_dict[results][col] / scaling_factor
     return df_dict
 
-"""
-Read in time series file and format as pandas dataframe and return dataframe if not empty.
-"""
+
 def process_time_series_file(ts_file, date_time_start, date_time_end):
+    """
+    Read in time series file and format as pandas dataframe and return dataframe if not empty.
+    """
     skiprows = skip_until_keyword(ts_file, 'BEGIN_DATA')
     ts = pd.read_csv(ts_file, parse_dates=False, sep=",", skiprows=skiprows)
     ts.columns = [x.lower() for x in ts.columns]
@@ -63,10 +66,11 @@ def add_buses_to_network(n, component_list):
                 n.add("Bus", component_dict["bus1"])
     return n
 
-"""
-Define PyPSA network and add components based on input dictionaries
-"""
+
 def dicts_to_pypsa(case_dict, component_list, component_attr):
+    """
+    Define PyPSA network and add components based on input dictionaries
+    """
     # Define PyPSA network
     n = pypsa.Network(override_component_attrs=component_attr)
 
@@ -119,14 +123,18 @@ def dicts_to_pypsa(case_dict, component_list, component_attr):
         n.add(component_dict["component"], component_dict["name"], **{k: v for k, v in component_dict.items() if k != "component" and k != "name"})
     return n
 
-"""
-Write results to excel file and pickle file
-"""
+
 def write_results_to_file(infile, outfile, component_input_list, df_dict):
+    """
+    Write results to excel file and pickle file
+    """
     # Write results to excel file
     with pd.ExcelWriter(outfile+".xlsx") as writer:
         # Copy infile to first sheet of output file
-        input_df = pd.read_excel(infile)
+        if infile.endswith('.xlsx'):
+            input_df = pd.read_excel(infile)
+        else:  # csv
+            input_df = pd.read_csv(infile)
         input_df.to_excel(writer, sheet_name="input file")
         # Write component list to excel file which includes the cost values
         pd.DataFrame(component_input_list).to_excel(writer, sheet_name="component inputs")
@@ -141,11 +149,13 @@ def write_results_to_file(infile, outfile, component_input_list, df_dict):
     # Logging info
     logging.info("Results written to file: " + outfile + ".xlsx")
     logging.info("Results written to file: " + outfile + ".pickle")
+    print(("Results written to file: " + outfile + ".xlsx"))
+    
 
-"""
-Postprocess results and collect in dataframes
-"""
 def postprocess_results(n, case_dict):
+    """
+    Postprocess results and collect in dataframes
+    """
     # Collect generators_t["p_max_pu"] and loads_t["p_set"] in one input dataframe, renaming columns to include "series" or "load"
     time_inputs_df = n.generators_t["p_max_pu"]
     time_inputs_df = time_inputs_df.rename(columns=dict(zip(n.generators_t["p_max_pu"].columns.to_list(),
@@ -193,6 +203,8 @@ def postprocess_results(n, case_dict):
 
 
 def build_network(infile):
+    """ infile: string path for .xlsx or .csv case file """
+    
     # Read in case input file and translate to dictionaries
     case_dict, component_list, component_attributes = read_input_file_to_dict(infile)
 
@@ -201,7 +213,9 @@ def build_network(infile):
 
     return network, case_dict, component_list
 
+
 def optimize_network(n, solver, scaling_factor=1.):
+    """ n: network """
     # Solve the linear optimization power flow with Gurobi
     if scaling_factor != 1.:
         logging.warning("Scaling factor is not 1.0, scaling objective function accordingly. Use with caution! Still experimental!")
@@ -209,6 +223,7 @@ def optimize_network(n, solver, scaling_factor=1.):
     n.model.objective = scaling_factor * n.model.objective
     n.optimize.solve_model(solver_name=solver)
     return n
+
 
 def run_pypsa(network, infile, case_dict, component_list, outfile_suffix=""):
     # Solve the linear optimization power flow with Gurobi
@@ -222,14 +237,14 @@ def run_pypsa(network, infile, case_dict, component_list, outfile_suffix=""):
     # Write results to file
     write_results_to_file(infile, output_file, component_list, output_df_dict)
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
     # Parse the input file as command line argument
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', '--filename', help="Input case file (xlsx or csv)", required=True)
     args = parser.parse_args()
     input_file = args.filename
-
+    
     # Run PyPSA
     n, c_dict, comp_list = build_network(input_file)
     run_pypsa(n, input_file, c_dict, comp_list)
