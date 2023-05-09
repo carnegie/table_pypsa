@@ -204,9 +204,11 @@ def read_input_file_to_dict(file_name):
         case_data_dict["datetime_start"], "%Y-%m-%d %H:%M:%S")).days // 365
     # Config file path
     cwd = Path.cwd()
-    # in case we're running an executable in clab_pypsa/dist/run_pypsa
-
-    if 'clab_pypsa' in cwd.parts:
+    
+    if cwd.parts[-1] == 'clab_pypsa':
+        config_file_path = str(cwd / 'utilities' / 'cost_config.yaml')  # for local or Github action
+        # note in GitHub action the cwd is /home/runner/work/clab_pypsa/clab_pypsa
+    elif 'clab_pypsa' in cwd.parts:  # in case we're running an executable in clab_pypsa/dist/run_pypsa via PyInstaller exe
         clab_pypsa_index = cwd.parts.index('clab_pypsa')
         path_to_clab_pypsa = Path(*cwd.parts[:clab_pypsa_index+1])
         config_file_path = str(path_to_clab_pypsa / 'utilities' / 'cost_config.yaml')
