@@ -28,18 +28,18 @@ def load_costs(tech_costs, config, Nyears=1.0):
     costs = pd.read_csv(tech_costs, index_col=[0, 1]).sort_index()
 
     # Load config files
-    with open(config, "r") as f:
-        try:  # TEMP 9may23 debug why doesn't find .yaml file
+    try:  # TEMP 9may23 debug why doesn't find .yaml file
+        with open(config, "r") as f:
             config = yaml.safe_load(f)
-        except Exception as e:
-            print("35: EXC", e)
-            print('  config:', config)
-            import os
-            print('37: cwd:', os.getcwd())
-            print('-- cwd files --')
-            for fname in os.listdir():
-                print('  ', fname)
-            print('-----------------')
+    except Exception as e:
+        print("35: EXC", e)
+        print('  config:', config)
+        import os
+        print('37: cwd:', os.getcwd())
+        print('-- cwd files --')
+        for fname in os.listdir():
+            print('  ', fname)
+        print('-----------------')
 
     # correct units to MW
     costs.loc[costs.unit.str.contains("/kW"), "value"] *= 1e3
