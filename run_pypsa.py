@@ -149,7 +149,6 @@ def write_results_to_file(infile, outfile, component_input_list, df_dict):
     # Logging info
     logging.info("Results written to file: " + outfile + ".xlsx")
     logging.info("Results written to file: " + outfile + ".pickle")
-    print(("Results written to file: " + outfile + ".xlsx"))
     
 
 def postprocess_results(n, case_dict):
