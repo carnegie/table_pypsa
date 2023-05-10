@@ -212,8 +212,6 @@ def read_input_file_to_dict(file_name):
         clab_pypsa_index = cwd.parts.index('clab_pypsa')
         path_to_clab_pypsa = Path(*cwd.parts[:clab_pypsa_index+1])
         config_file_path = str(path_to_clab_pypsa / 'utilities' / 'cost_config.yaml')
-    elif 'clab_pypsa_optimizations' in cwd.parts:  # 8may23 to get this to run in DGE_clab_pypsa/clab_pypsa_optimizations
-        config_file_path = str(cwd / 'utilities' / 'cost_config.yaml')
     else:
         logging.error('Current directory is not clab_pypsa and clab directory is not in current directory.')
 

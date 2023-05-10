@@ -239,14 +239,11 @@ def run_pypsa(network, infile, case_dict, component_list, outfile_suffix=""):
 
 
 if __name__ == "__main__":
-    """
     # Parse the input file as command line argument
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', '--filename', help="Input case file (xlsx or csv)", required=True)
     args = parser.parse_args()
     input_file = args.filename
-    """
-    input_file = "test/test_case.xlsx"
     
     # Run PyPSA
     n, c_dict, comp_list = build_network(input_file)

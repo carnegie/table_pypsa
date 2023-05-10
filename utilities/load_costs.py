@@ -3,6 +3,7 @@
 import pandas as pd
 import yaml
 
+
 def calculate_annuity(n, r):
     """
     Calculate the annuity factor for an asset with lifetime n years and.
@@ -18,6 +19,7 @@ def calculate_annuity(n, r):
     else:
         return 1 / n
 
+
 def load_costs(tech_costs, config, Nyears=1.0):
     """
     Create and return a costs dataframe loaded from the tech_costs file
@@ -28,21 +30,8 @@ def load_costs(tech_costs, config, Nyears=1.0):
     costs = pd.read_csv(tech_costs, index_col=[0, 1]).sort_index()
 
     # Load config files
-    print('32: config:', config)
-    try:
-        with open(config, "r") as f:
-            config = yaml.safe_load(f)
-    except Exception as e:
-        import os
-        print("37: EXC", e)
-        print('  config:', config)
-        print('37: cwd:', os.getcwd())
-        print('-- cwd files --')
-        for fname in os.listdir():
-            print('  ', fname)
-        print('-----------------')
-        import sys
-        sys.exit()
+    with open(config, "r") as f:
+        config = yaml.safe_load(f)
 
     # correct units to MW
     costs.loc[costs.unit.str.contains("/kW"), "value"] *= 1e3
