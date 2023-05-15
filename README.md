@@ -1,22 +1,4 @@
-# Scripts to run PyPSA with input tables
 
-#
-## Install PyPSA
-
-[Install PyPSA](https://pypsa.readthedocs.io/en/latest/installation.html) with
-
-```conda install -c conda-forge pypsa```
-
-or 
-
-```pip install pypsa```
-
-#
-## Install Gurobi
-
-Follow [installation instructions](https://www.gurobi.com/documentation/10.0/quickstart_windows/cs_python_installation_opt.html) to install Gurobi. Free licenses for academics are available.
-
-#
 ## Clone this repository 
 
 with --recursive (this clones PyPSA as a submodule ), for example
@@ -37,16 +19,25 @@ Then activate the environment with
 every time you want to run pypsa_table.
 
 #
+## Install a solver
+
+For Gurobi, follow [installation instructions](https://www.gurobi.com/documentation/10.0/quickstart_windows/cs_python_installation_opt.html) to install Gurobi. Free licenses for academics are available.
+
+For other solvers, see the instructions in the [PyPSA documentation](https://pypsa.readthedocs.io/en/latest/installation.html).
+
+#
 ## Run PyPSA
 
 To run PyPSA, you need to have a case input file and data input files.
 
 pyPSA is run with the command
 
-```python run_pypsa.py -f test_case.xlsx```
+```python run_pypsa.py -f input_file.xlsx```
 
-where `test_case.xlsx` is the case input file.
+where `input_file.xlsx` is the case input file.
+(See for example the `test_case.xlsx` file in `test/ .`)
 
+#
 #
 ## Create a new project based on clab_pypsa
 

@@ -59,11 +59,6 @@ def load_costs(tech_costs, config, Nyears=1.0):
     costs.at["OCGT", "co2_emissions"] = costs.at["gas", "co2_emissions"]
     costs.at["CCGT", "co2_emissions"] = costs.at["gas", "co2_emissions"]
 
-    costs.at["solar", "capital_cost"] = (
-        config["rooftop_share"] * costs.at["solar-rooftop", "capital_cost"]
-        + (1 - config["rooftop_share"]) * costs.at["solar-utility", "capital_cost"]
-    )
-
     def costs_for_storage(store, link1, link2=None, max_hours=1.0):
         capital_cost = link1["capital_cost"] + max_hours * store["capital_cost"]
         if link2 is not None:
