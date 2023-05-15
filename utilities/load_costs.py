@@ -3,6 +3,7 @@
 import pandas as pd
 import yaml
 
+
 def calculate_annuity(n, r):
     """
     Calculate the annuity factor for an asset with lifetime n years and.
@@ -18,7 +19,13 @@ def calculate_annuity(n, r):
     else:
         return 1 / n
 
+
 def load_costs(tech_costs, config, Nyears=1.0):
+    """
+    Create and return a costs dataframe loaded from the tech_costs file
+    config: a yaml file
+    """
+    
     # Read in costs from csv file
     costs = pd.read_csv(tech_costs, index_col=[0, 1]).sort_index()
 
