@@ -7,7 +7,7 @@ import pandas as pd
 import os, sys
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 from utilities.read_input import read_input_file_to_dict
-from utilities.utilities import skip_until_keyword, get_output_filename
+from utilities.utilities import skip_until_keyword, get_output_filename, stats_add_units
 
 
 def normalize_time_series(component_dict):
@@ -189,10 +189,12 @@ def postprocess_results(n, case_dict):
     # Collect objective and system cost in one dataframe
     system_cost = n.statistics()["Capital Expenditure"].sum() / case_dict["total_hours"] + n.statistics()[
         "Operational Expenditure"].sum()
-    case_results_df = pd.DataFrame([[n.objective, system_cost]], columns=['objective [$]', 'system cost [$/h]'])
+    case_results_df = pd.DataFrame([[n.objective, system_cost]], columns=['objective [{0}]'.format(case_dict["currency"]), 'system cost [{0}/{1}]'.format(case_dict["currency"], case_dict["time_unit"])])
+
+    statistics_df = stats_add_units(n.statistics, case_dict)
 
     # Collect results in one dictionary
-    df_dict = {'time inputs': time_inputs_df, 'case results': case_results_df, 'component results': n.statistics(),
+    df_dict = {'time inputs': time_inputs_df, 'case results': case_results_df, 'component results': statistics_df,
                'time results': time_results_df}
 
     # Divide results by scaling factor
