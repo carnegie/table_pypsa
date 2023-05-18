@@ -1,5 +1,5 @@
 import os, csv
-
+import pandas as pd
 
 def check_directory(directory):
     """
@@ -104,3 +104,18 @@ def get_output_filename(case_input_dict):
     check_directory(os.path.join(case_input_dict["output_path"], case_input_dict["case_name"]))
     outfile = os.path.join(case_input_dict["output_path"], case_input_dict["case_name"], case_input_dict["filename_prefix"])
     return outfile
+
+def stats_add_units(n_stats, case_input_dict):
+    """
+    return statistics dataframe with units added to column names
+    """
+    stats = pd.DataFrame(n_stats())
+    for col in stats.columns:
+        if "Expenditure" in col or "Revenue" in col:
+            unit = " [{}]".format(case_input_dict["currency"])
+        elif not "Factor" in col :
+            unit = " [{}]".format(case_input_dict["power_unit"])
+        else:
+            unit = ""
+        stats.rename(columns={col: col+unit}, inplace=True)
+    return stats
