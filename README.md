@@ -1,7 +1,27 @@
+# Table input for PyPSA
+
+This repository holds an interface for [PyPSA](https://github.com/PyPSA/pypsa) that allows to build a network from a table input (xlsx or csv) file.
+The following information is read in from the input file:
+- **Case Data** holds general information about the setup like
+    - input/output paths
+    - time range
+    - solver, logging level, numeric scale factor
+    - units
+- **Component Data** holds information about the components in the network and their attributes like
+    - component type and name
+    - bus(ses) connected to this component
+    - capital and marginal costs
+    - time series file names
+    - other attributes like efficiency, max_hours, etc 
+
+(See `test/test_case.xlsx` for an example)
+
+
+#
 
 ## Clone this repository 
 
-with --recursive (this clones PyPSA as a submodule ), for example
+with --recursive (this clones PyPSA as a submodule )
 
 ```git clone https://github.com/carnegie/clab_pypsa --recursive```
 
@@ -21,9 +41,9 @@ every time you want to run pypsa_table.
 #
 ## Install a solver
 
-For Gurobi, follow [installation instructions](https://www.gurobi.com/documentation/10.0/quickstart_windows/cs_python_installation_opt.html) to install Gurobi. Free licenses for academics are available.
+For using Gurobi, the installation is already included in the environment but you still need to [obtain and activate a license](https://www.gurobi.com/documentation/9.5/quickstart_windows/retrieving_and_setting_up_.html). Free licenses for academics are available.
 
-For other solvers, see the instructions in the [PyPSA documentation](https://pypsa.readthedocs.io/en/latest/installation.html).
+For other solvers, see the installation instructions in the [PyPSA documentation](https://pypsa.readthedocs.io/en/latest/installation.html).
 
 #
 ## Run PyPSA
@@ -35,13 +55,13 @@ pyPSA is run with the command
 ```python run_pypsa.py -f input_file.xlsx```
 
 where `input_file.xlsx` is the case input file.
-(See for example the `test_case.xlsx` file in `test/ .`)
+
 
 #
 #
 ## Create a new project based on clab_pypsa
 
-In a new repository add clab_pypsa as a submodule with (this will follow the main branch of clab_pypsa)
+To add `clab_pypsa` as a submodule in a new repository do
 
 ```git submodule add -b main https://github.com/carnegie/clab_pypsa```
 
@@ -49,8 +69,9 @@ Make sure to update the submodule regularly by doing
 
 ```git submodule update --remote --recursive```
 
-#
 To run PyPSA in that repository, then run
 
 ```python clab_pypsa/run_pypsa.py -f <path_to_your_case_file>```
 
+#
+#
