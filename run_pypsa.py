@@ -1,11 +1,26 @@
+import pypsa
 import pickle
 import argparse,logging
-import pypsa
+from pathlib import Path
+import os, sys
 import pandas as pd
 
+# note in GitHub action the cwd is /home/runner/work/clab_pypsa/clab_pypsa
+
+# if running as .exe from the dist/run_pypsa dir cd to the clab_pypsa dir
+cwd = Path.cwd()
+if cwd.parts[-1] == 'run_pypsa':
+    os.chdir('../..')  # move up to clab_pypsa
+    
 # import always relative to the current file
-import os, sys
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
+
+# if not in clab_pypsa directory add it to the sys.path
+cwd = Path.cwd()
+if not cwd.parts[-1]=='clab_pypsa' and 'clab_pypsa' in os.listdir():
+    # add path to clab_pypsa to sys.path
+    sys.path.append(str(cwd / 'clab_pypsa'))
+    
 from utilities.read_input import read_input_file_to_dict
 from utilities.utilities import skip_until_keyword, get_output_filename
 
