@@ -16,8 +16,18 @@ The following information is read in from the input file:
 
 (See `test/test_case.xlsx` for an example)
 
+#
+## Technology data
+
+Costs and other technology inputs can be read in from the [PyPSA technology database](https://github.com/PyPSA/technology-data) or manually specified in the input file.
+- To read values from the database, adjust the `costs_path` to the cost assumptions to be used (default is 2020 costs) and **choose the name of the technology exactly as in the database**. Empty cells will be read from the database if they are specified there.
+- To manually define values, just enter the value in the input file. Use technology names that are different than those in the database to avoid confusion.
+- Combinations of both are possible as well.
+
 
 #
+
+# Installation
 
 ## Clone this repository 
 
