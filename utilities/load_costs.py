@@ -3,7 +3,6 @@
 import pandas as pd
 import yaml
 
-
 def calculate_annuity(n, r):
     """
     Calculate the annuity factor for an asset with lifetime n years and.
@@ -19,13 +18,11 @@ def calculate_annuity(n, r):
     else:
         return 1 / n
 
-
 def load_costs(tech_costs, config, Nyears=1.0):
     """
     Create and return a costs dataframe loaded from the tech_costs file
     config: a yaml file
     """
-    
     # Read in costs from csv file
     costs = pd.read_csv(tech_costs, index_col=[0, 1]).sort_index()
 
@@ -59,26 +56,8 @@ def load_costs(tech_costs, config, Nyears=1.0):
     costs.at["OCGT", "co2_emissions"] = costs.at["gas", "co2_emissions"]
     costs.at["CCGT", "co2_emissions"] = costs.at["gas", "co2_emissions"]
 
-    def costs_for_storage(store, link1, link2=None, max_hours=1.0):
-        capital_cost = link1["capital_cost"] + max_hours * store["capital_cost"]
-        if link2 is not None:
-            capital_cost += link2["capital_cost"]
-        return pd.Series(
-            dict(capital_cost=capital_cost, marginal_cost=0.0, co2_emissions=0.0)
-        )
+    costs.at["direct air capture", "energy-input"] = costs.at["direct air capture", "electricity-input"] + costs.at["direct air capture", "heat-input"]  
 
-    max_hours = config["max_hours"]
-    costs.loc["battery"] = costs_for_storage(
-        costs.loc["battery storage"],
-        costs.loc["battery inverter"],
-        max_hours=max_hours["battery"],
-    )
-    costs.loc["H2"] = costs_for_storage(
-        costs.loc["hydrogen storage underground"],
-        costs.loc["fuel cell"],
-        costs.loc["electrolysis"],
-        max_hours=max_hours["H2"],
-    )
 
     for attr in ("marginal_cost", "capital_cost"):
         overwrites = config.get(attr)

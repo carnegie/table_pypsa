@@ -208,6 +208,8 @@ def read_input_file_to_dict(file_name):
     if cwd.parts[-1] == 'clab_pypsa':
         config_file_path = str(cwd / 'utilities' / 'cost_config.yaml')  # for local or Github action
         # note in GitHub action the cwd is /home/runner/work/clab_pypsa/clab_pypsa
+    elif (cwd / 'clab_pypsa').is_dir():  # we're above the clab_pypsa dir
+        config_file_path = str(cwd / 'clab_pypsa' / 'utilities' / 'cost_config.yaml')
     elif 'clab_pypsa' in cwd.parts:  # in case we're running an executable in clab_pypsa/dist/run_pypsa via PyInstaller exe
         clab_pypsa_index = cwd.parts.index('clab_pypsa')
         path_to_clab_pypsa = Path(*cwd.parts[:clab_pypsa_index+1])
