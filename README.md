@@ -35,10 +35,16 @@ with --recursive (this clones PyPSA as a submodule )
 
 ```git clone https://github.com/carnegie/clab_pypsa --recursive```
 
+which creates a directory `clab_pypsa`, cd into that director with
+
+```cd clab_pypsa``` 
+
 #
 ## Install dependencies in the environment
 
-When you're running for the first time, create a new environment with
+When you're running for the first time, create a new environment based on the `env.yaml` file. We recommend using conda for that.
+
+If you're running for the first time, create the environment with
 
 ```conda env create -f env.yaml```
 
@@ -46,7 +52,7 @@ Then activate the environment with
 
 ```conda activate pypsa_table```
 
-every time you want to run pypsa_table.
+**every time** you want this code.
 
 #
 ## Install a solver
@@ -62,9 +68,11 @@ To run PyPSA, you need to have a case input file and data input files.
 
 pyPSA is run with the command
 
-```python run_pypsa.py -f input_file.xlsx```
+```python run_pypsa.py -f <input_file>```
 
-where `input_file.xlsx` is the case input file.
+where `<input_file>` is the case input file, e.g.
+
+```python run_pypsa.py -f test/test_case.xlsx``` 
 
 
 #
