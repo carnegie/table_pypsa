@@ -66,6 +66,7 @@ pyPSA is run with the command
 
 where `input_file.xlsx` is the case input file.
 
+Note: If you run into a problem executing the code, try running within a 'bash' shell. 
 
 #
 #
@@ -82,6 +83,7 @@ Make sure to update the submodule regularly by doing
 To run PyPSA in that repository, then run
 
 ```python clab_pypsa/run_pypsa.py -f <path_to_your_case_file>```
+
 
 #
 #
