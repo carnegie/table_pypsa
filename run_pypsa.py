@@ -32,7 +32,7 @@ def scale_normalize_time_series(component_dict, scaling_factor=1.):
     # Scale all pandas series in component_list by numerics_scaling and normalize by normalization factor
     if "time_series_file" in component_dict:
         for key in component_dict:
-            if type(component_dict[key]) is pd.Series or "cost" in key:
+            if type(component_dict[key]) is pd.Series or "capital_cost" in key:
                 normalization = component_dict['normalization'] / component_dict[key].mean() if 'normalization' in component_dict else 1.
                 component_dict[key] = component_dict[key] * normalization * scaling_factor
     return component_dict

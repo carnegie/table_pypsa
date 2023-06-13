@@ -111,10 +111,12 @@ def stats_add_units(n_stats, case_input_dict):
     """
     stats = pd.DataFrame(n_stats())
     for col in stats.columns:
-        if "Expenditure" in col or "Revenue" in col:
+        if "Capital Expenditure" in col or "Revenue" in col:
             unit = " [{}]".format(case_input_dict["currency"])
         elif not "Factor" in col :
             unit = " [{}]".format(case_input_dict["power_unit"])
+        elif "Operational Expenditure" in col:
+            unit = " [{} / {}]".format(case_input_dict["currency"], case_input_dict["time_unit"])
         else:
             unit = ""
         stats.rename(columns={col: col+unit}, inplace=True)

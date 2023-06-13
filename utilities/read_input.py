@@ -108,6 +108,7 @@ def define_special_attributes(comp, attr):
         use_attr = list(attr)
         use_attr[attr.index('p_min_pu')] = 'e_min_pu'
         use_attr[attr.index('p_nom')] = 'e_nom'
+        use_attr[attr.index('cyclic_state_of_charge')] = 'e_cyclic'
     else:
         use_attr = attr
     return use_attr
@@ -253,7 +254,8 @@ def read_input_file_to_dict(file_name):
         for i in range(2,len(row)):
             attribute = use_attributes[i]
             value = row[i]
-            component_data_dict = read_component_data(component_data_dict, attribute, value, tech_name, costs)
+            if attribute in component_attribute_dictionary[component].index:
+                component_data_dict = read_component_data(component_data_dict, attribute, value, tech_name, costs)
 
         component_data_list.append(component_data_dict)
     return case_data_dict, component_data_list, component_attribute_dictionary
