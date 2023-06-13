@@ -113,10 +113,10 @@ def stats_add_units(n_stats, case_input_dict):
     for col in stats.columns:
         if "Capital Expenditure" in col or "Revenue" in col:
             unit = " [{}]".format(case_input_dict["currency"])
-        elif not "Factor" in col :
-            unit = " [{}]".format(case_input_dict["power_unit"])
         elif "Operational Expenditure" in col:
-            unit = " [{} / {}]".format(case_input_dict["currency"], case_input_dict["time_unit"])
+            unit = " [{}/{}]".format(case_input_dict["currency"], case_input_dict["time_unit"])
+        elif not "Factor" in col :
+            unit = " [{}]".format(case_input_dict["power_unit"])            
         else:
             unit = ""
         stats.rename(columns={col: col+unit}, inplace=True)
