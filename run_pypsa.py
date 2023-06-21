@@ -47,12 +47,12 @@ def divide_results_by_numeric_factor(df_dict, scaling_factor):
             result = df_dict[results]
             for col in result.columns:
                 if "Capacity Factor" in col or "Optimal Capacity" in col or "Curtailment" in col:
-                    if not "Factor" in col:
+                    if "Optimal Capacity" in col:
                         result[col] /= scaling_factor
                     # Scale capacity factor only when carrier is also in time inputs
                     for carr in result.index.get_level_values(1).unique():
                         if carr+" series" in df_dict["time inputs"].columns:
-                            if "Factor" in col:
+                            if not "Optimal Capacity" in col:
                                 # Divide by scaling factor
                                 result.loc[result.index.get_level_values(1) == carr, col] /= scaling_factor
                             else:

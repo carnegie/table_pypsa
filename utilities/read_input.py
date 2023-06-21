@@ -122,24 +122,47 @@ def read_component_data(comp_dict, attr, val, technology, costs_df):
     # if value is a number or name, read that.
     # if it's empty or a cost name, use read_attr to get the value from the costs dataframe.
     if attr != None:
+        read_attr = None
         # if "name", "bus", or "time_series_file" is in attr or value can be converted to a float, use that
         if (val != None and (any(x in attr for x in ['name', 'bus', 'carrier', 'time_series_file']) or is_number(val))):
             comp_dict[attr] = val
-            read_attr = None
-        # if otherwise value is a string, use that as read attr
+        # if otherwise value is a string, use database value if the string is just 'db'
+        # if first two letters are db use the rest of the string as the attribute name
+        # if there is a '*' in the string, use the value before the '*' as a factor to multiply the database value
         elif type(val) is str:
-            if '*' in val:
-                factor = float(val.split('*')[0])
-                val = val.split('*')[1]
-            read_attr = val
-        # if value is empty, use attr as read attr
-        else:
-            read_attr = attr
+            if 'db' in val:
+                if val == 'db':
+                    read_attr = attr
+                elif '*' in val:
+                    factor = float(val.split('*')[0])
+                    val = val.split('*')[1].replace('db_','')
+                    read_attr = val
+                else:
+                    val = val.replace('db_','')
+                    read_attr = val
+            else:
+                logging.error('Tried to read in a string that is not a number, name, or contains "db" to indicate use a database value. Failed = '+val + ' for attribute ' + attr + ' for component ' + comp_dict["component"] + ' ' + comp_dict["name"])
+
+
         # if read_attr is defined, use it to get the value from the costs dataframe
-        if (read_attr != None and read_attr in costs_df.columns and technology in costs_df.index):
-            comp_dict[attr] = costs_df.loc[technology, read_attr] * factor
-            logging.info('Using default value for ' + comp_dict["component"] + ' "' + comp_dict["name"] + '" for ' + attr
-                         + ' = ' + str(comp_dict[attr]))
+        if read_attr != None:
+            if (technology in costs_df.index and read_attr in costs_df.columns):
+                comp_dict[attr] = costs_df.loc[technology, read_attr] * factor
+                logging.info('Using technology database value for ' + comp_dict["component"] + ' "' + comp_dict["name"] + '" for ' + attr
+                                + ' = ' + str(comp_dict[attr]) + ' for technology ' + technology)   
+            elif (technology not in costs_df.index and read_attr in costs_df.columns):
+                logging.error('Technology ' + technology + ' not in database. Trying to use database value for ' + read_attr + '.')
+                logging.error('Terminal error. Exiting.')
+                exit() 
+            elif (technology in costs_df.index and read_attr not in costs_df.columns):
+                logging.error('Attribute ' + read_attr + ' does not have a database value for technology ' + technology + '.')
+                logging.error('Terminal error. Exiting.')
+                exit()
+            else:
+                logging.error('Technology ' + technology + ' not in database and attribute ' + read_attr + ' does not have a database value for technology ' + technology + '.')
+                logging.error('Terminal error. Exiting.')
+                exit()
+
     return comp_dict
 
 
