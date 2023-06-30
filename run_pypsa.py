@@ -217,8 +217,8 @@ def postprocess_results(n, case_dict):
             [name + " dispatch" for name in n.links_t["p0"].columns.to_list()])))], axis=1)
 
     # Collect objective and system cost in one dataframe
-    system_cost = n.statistics()["Capital Expenditure"].sum() / case_dict["total_hours"] + n.statistics()[
-        "Operational Expenditure"].sum()
+    system_cost = (n.statistics()["Capital Expenditure"].sum() + n.statistics()[
+        "Operational Expenditure"].sum()) / case_dict["total_hours"]
     case_results_df = pd.DataFrame([[n.objective, system_cost]], columns=['objective [{0}]'.format(case_dict["currency"]), 'system cost [{0}/{1}]'.format(case_dict["currency"], case_dict["time_unit"])])
 
     statistics_df = stats_add_units(n.statistics, case_dict)
@@ -242,7 +242,7 @@ def build_network(infile):
     # Define PyPSA network
     network = dicts_to_pypsa(case_dict, component_list, component_attributes)
 
-    return network, case_dict, component_list
+    return network, case_dict, component_list, component_attributes
 
 
 def run_pypsa(network, infile, case_dict, component_list, outfile_suffix=""):
@@ -266,5 +266,5 @@ if __name__ == "__main__":
     input_file = args.filename
     
     # Run PyPSA
-    n, c_dict, comp_list = build_network(input_file)
+    n, c_dict, comp_list, comp_attrs = build_network(input_file)
     run_pypsa(n, input_file, c_dict, comp_list)
