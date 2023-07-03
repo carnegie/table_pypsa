@@ -249,6 +249,11 @@ def run_pypsa(network, infile, case_dict, component_list, outfile_suffix=""):
     # Solve the linear optimization power flow with Gurobi
     network.optimize(solver_name=case_dict['solver'])
 
+    # Check if optimization was successful
+    if not hasattr(network, 'objective'):
+        logging.warning("Optimization was not successful! Returning now.")
+        return
+
     # Postprocess results and write to excel, pickle
     output_df_dict = postprocess_results(network, case_dict)
 
