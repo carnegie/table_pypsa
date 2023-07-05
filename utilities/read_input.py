@@ -9,6 +9,7 @@ from utilities.utilities import is_number, remove_empty_rows, find_first_row_wit
 from datetime import datetime
 from pathlib import Path
 import pandas as pd
+from sys import exit
 
 
 def read_pypsa_input_file(file_name):
