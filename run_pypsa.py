@@ -32,9 +32,13 @@ def scale_normalize_time_series(component_dict, scaling_factor=1.):
     # Scale all pandas series in component_list by numerics_scaling and normalize by normalization factor
     if "time_series_file" in component_dict:
         for key in component_dict:
-            if type(component_dict[key]) is pd.Series or "capital_cost" in key:
+            # Normalize time series by normalization factor if defined
+            if type(component_dict[key]) is pd.Series:
                 normalization = component_dict['normalization'] / component_dict[key].mean() if 'normalization' in component_dict else 1.
-                component_dict[key] = component_dict[key] * normalization * scaling_factor
+                component_dict[key] *= normalization 
+            # Scale by numerics_scaling, this avoids rounding otherwise done in Gurobi for small numbers
+            if type(component_dict[key]) is pd.Series or "capital_cost" in key:
+                component_dict[key] *= scaling_factor
     return component_dict
 
 
