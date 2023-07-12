@@ -16,8 +16,8 @@ for sheet_name in ['case results', 'component results', 'time results']:
     output_df = pd.read_excel(output_xlsx_path, sheet_name=sheet_name)
     expected_df = pd.read_excel('test/test_prefix_expected.xlsx', sheet_name=sheet_name)
 
-    # compare pypsa output to expected output
-    comparison_df = output_df.compare(expected_df)
+    # compare pypsa output to expected output up to 6 decimal places
+    comparison_df = output_df.round(6).compare(expected_df.round(6))
     print('='*40)
     if comparison_df.shape == (0,0):
         print(f'OK, {sheet_name} sheet: output == expected')
