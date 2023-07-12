@@ -109,12 +109,18 @@ def stats_add_units(n_stats, case_input_dict):
     """
     return statistics dataframe with units added to column names
     """
-    stats = pd.DataFrame(n_stats())
+    stats = n_stats().copy()
     for col in stats.columns:
-        if "Expenditure" in col or "Revenue" in col:
+        if "Capital Expenditure" in col or "Revenue" in col:
             unit = " [{}]".format(case_input_dict["currency"])
+        elif "Operational Expenditure" in col:
+            unit = " [{}]".format(case_input_dict["currency"])
+        elif "Curtailment" in col:
+            unit = " [{0}{1}]".format(case_input_dict["power_unit"], case_input_dict["time_unit"])
+        elif "Market Value" in col:
+            unit = " [{0}/{1}{2}]".format(case_input_dict["currency"], case_input_dict["power_unit"], case_input_dict["time_unit"])
         elif not "Factor" in col :
-            unit = " [{}]".format(case_input_dict["power_unit"])
+            unit = " [{}]".format(case_input_dict["power_unit"])  
         else:
             unit = ""
         stats.rename(columns={col: col+unit}, inplace=True)
