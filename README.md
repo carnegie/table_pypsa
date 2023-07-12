@@ -20,9 +20,11 @@ The following information is read in from the input file:
 ## Technology data
 
 Costs and other technology inputs can be read in from the [PyPSA technology database](https://github.com/PyPSA/technology-data) or manually specified in the input file.
-- To read values from the database, adjust the `costs_path` to the cost assumptions to be used (default is 2020 costs) and **choose the name of the technology exactly as in the database**. In the **cells that should be read from the database, enter "db"**. If this attribute does not exist in the database, this will cause an error. Empty cells default to PyPSA defaults.
+- To read values from the database, adjust the `costs_path` to the cost assumptions to be used (default is 2020 costs) and **choose the name of the technology exactly as in the database**. In the **cells that should be read from the database, enter "db"**. If this attribute does not exist in the database, this will cause an error. To multiply the database value by a factor, enter "*factor*\*db_*attr*", e.g. "3\*db_capital_cost". Empty cells default to PyPSA defaults.
 - To manually define values, just enter the value in the input file. Use technology names that are different than those in the database to avoid confusion.
 - Combinations of both are possible as well.
+
+(See `test/test_case_db_values.xlsx` for an example)
 
 
 #
