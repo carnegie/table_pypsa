@@ -163,13 +163,18 @@ def write_results_to_file(infile, outfile, component_input_list, df_dict):
     Write results to excel file and pickle file
     """
     # Write results to excel file
+    # If input was read from output, change name
+    if infile == outfile+".xlsx":
+        outfile = outfile + "_rerun"
     with pd.ExcelWriter(outfile+".xlsx") as writer:
         # Copy infile to first sheet of output file
         if infile.endswith('.xlsx'):
-            input_df = pd.read_excel(infile)
+            input_df = pd.read_excel(infile, sheet_name=0)
         else:  # csv
             input_df = pd.read_csv(infile)
-        input_df.to_excel(writer, sheet_name="input file")
+        # Column names
+        headers = ["PyPSA case input file"] + (len(input_df.columns)-1) * [""]
+        input_df.to_excel(writer, sheet_name="input file", index=False, header=headers)
         # Write component list to excel file which includes the cost values
         pd.DataFrame(component_input_list).to_excel(writer, sheet_name="component inputs")
         # Write results to excel file
