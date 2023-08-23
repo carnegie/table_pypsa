@@ -176,10 +176,13 @@ def write_results_to_file(infile, outfile, component_input_list, df_dict):
         headers = ["PyPSA case input file"] + (len(input_df.columns)-1) * [""]
         input_df.to_excel(writer, sheet_name="input file", index=False, header=headers)
         # Write component list to excel file which includes the cost values
-        pd.DataFrame(component_input_list).to_excel(writer, sheet_name="component inputs")
+        pd.DataFrame(component_input_list).to_excel(writer, index=False, sheet_name="component inputs")
         # Write results to excel file
         for results in df_dict:
-            df_dict[results].to_excel(writer, sheet_name=results)
+            if results == "case results":
+                df_dict[results].to_excel(writer, sheet_name=results, index=False)
+            else:
+                df_dict[results].to_excel(writer, sheet_name=results)
 
     # Write results to pickle file
     with open(outfile+".pickle", 'wb') as f:
