@@ -140,6 +140,9 @@ def dicts_to_pypsa(case_dict, component_list, component_attr):
                 else:
                     logging.warning("Time series file not found for " + component_dict["name"] + ". Skipping component.")
                     continue
+            else:
+                # Without time series file, set snaphsots to number of time steps defined in the input file
+                n.set_snapshots(range(int(round(case_dict["no_time_steps"]))))
 
         # Add p_nom_extendable attribute to generators, storages and links if p_nom is not defined
         if component_dict["component"] in ["Generator", "StorageUnit", "Link"]:
@@ -223,7 +226,7 @@ def postprocess_results(n, case_dict):
             [name + " state of charge" for name in n.storage_units_t["state_of_charge"].columns.to_list()])))], axis=1)
     time_results_df = pd.concat([time_results_df, n.stores_t["e"].rename(columns=dict(
         zip(n.stores_t["e"].columns.to_list(),
-            [name + " state of charge" for name in n.stores_t["e"].columns.to_list()])))], axis=1)
+            [name + " e" for name in n.stores_t["e"].columns.to_list()])))], axis=1)
     time_results_df = pd.concat([time_results_df, n.links_t["p0"].rename(columns=dict(
         zip(n.links_t["p0"].columns.to_list(),
             [name + " dispatch" for name in n.links_t["p0"].columns.to_list()])))], axis=1)
@@ -259,6 +262,7 @@ def build_network(infile):
 
 def run_pypsa(network, infile, case_dict, component_list, outfile_suffix=""):
     # Solve the linear optimization power flow with Gurobi
+
     network.optimize(solver_name=case_dict['solver'])
 
     # Check if optimization was successful

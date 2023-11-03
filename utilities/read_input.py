@@ -76,7 +76,7 @@ def update_component_attribute_dict(attributes_from_file):
     Create dictionary of allowable attributes for each component type
     """
     component_attribute_dict = pypsa.descriptors.Dict({k: v.copy() for k, v in pypsa.components.component_attrs.items()})
-
+    
     bus_numbers = [int(bus.replace("bus","")) for bus in attributes_from_file if bus is not None and bus.startswith('bus') and bus != 'bus']
     # Add attributes for components that are not in default PyPSA
 
@@ -108,6 +108,7 @@ def define_special_attributes(comp, attr):
     elif comp == 'Store':
         use_attr = list(attr)
         use_attr[attr.index('p_min_pu')] = 'e_min_pu'
+        use_attr[attr.index('p_max_pu')] = 'e_max_pu'
         use_attr[attr.index('p_nom')] = 'e_nom'
         use_attr[attr.index('cyclic_state_of_charge')] = 'e_cyclic'
     else:

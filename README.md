@@ -1,12 +1,20 @@
 # Table input for PyPSA
 
-This repository holds an interface for [PyPSA](https://github.com/PyPSA/pypsa) that allows to build a network from a table input (xlsx or csv) file.
-The following information is read in from the input file:
+### Build a PyPSA network from an Excel table, also suitable for users with little programming experience
+
+This repository holds an interface for [PyPSA](https://github.com/PyPSA/pypsa) that allows to build a network from a table input (xlsx or csv) file. It is designed to be easy to use for users with little programming experience. It allows to build a network from a table input file and to optimize a PyPSA network with a single command without requiring detailed knowledge of the PyPSA syntax. Its limitations lie in the complexity of the network that can be built. For more complex networks, we recommend to use [PyPSA-Eur](https://github.com/PyPSA/pypsa-eur) or [PyPSA-Earth](https://github.com/pypsa-meets-earth/pypsa-earth).
+
+
+## The table input file
+The following information is read in from the input file (see `test/test_case.xlsx` for an example):
 - **Case Data** holds general information about the setup like
     - input/output paths
     - time range
     - solver, logging level, numeric scale factor
     - units
+
+![case_data](test/case_data.png)
+
 - **Component Data** holds information about the components in the network and their attributes like
     - component type and name
     - bus(ses) connected to this component
@@ -14,7 +22,7 @@ The following information is read in from the input file:
     - time series file names
     - other attributes like efficiency, max_hours, etc 
 
-(See `test/test_case.xlsx` for an example)
+![case_data](test/component_data.png)
 
 #
 ## Technology data
@@ -44,7 +52,7 @@ which creates a directory `clab_pypsa`, cd into that director with
 #
 ## Install dependencies in the environment
 
-When you're running for the first time, create a new environment based on the `env.yaml` file. We recommend using conda for that.
+When you're running for the first time, create a new environment based on the `env.yaml` file. We recommend using conda for easy package management.
 
 If you're running for the first time, create the environment with
 
