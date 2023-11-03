@@ -140,9 +140,10 @@ def dicts_to_pypsa(case_dict, component_list, component_attr):
                 else:
                     logging.warning("Time series file not found for " + component_dict["name"] + ". Skipping component.")
                     continue
-            else:
-                # Without time series file, set snaphsots to number of time steps defined in the input file
-                n.set_snapshots(range(int(round(case_dict["no_time_steps"]))))
+
+        # Without time series file, set snaphsots to number of time steps defined in the input file
+        if len(n.snapshots) == 1 and case_dict["no_time_steps"] is not None:
+            n.set_snapshots(range(int(round(case_dict["no_time_steps"]))))
 
         # Add p_nom_extendable attribute to generators, storages and links if p_nom is not defined
         if component_dict["component"] in ["Generator", "StorageUnit", "Link"]:
@@ -261,8 +262,8 @@ def build_network(infile):
 
 
 def run_pypsa(network, infile, case_dict, component_list, outfile_suffix=""):
-    # Solve the linear optimization power flow with Gurobi
 
+    # Solve the linear optimization power flow with Gurobi
     network.optimize(solver_name=case_dict['solver'])
 
     # Check if optimization was successful

@@ -104,13 +104,18 @@ def define_special_attributes(comp, attr):
     # for storage unit replace 'efficiency' with 'efficiency_store'
     elif comp == 'StorageUnit':
         use_attr = list(attr)
-        use_attr[attr.index('efficiency')] = 'efficiency_store'
+        if 'efficiency' in attr:
+            use_attr[attr.index('efficiency')] = 'efficiency_store'
     elif comp == 'Store':
         use_attr = list(attr)
-        use_attr[attr.index('p_min_pu')] = 'e_min_pu'
-        use_attr[attr.index('p_max_pu')] = 'e_max_pu'
-        use_attr[attr.index('p_nom')] = 'e_nom'
-        use_attr[attr.index('cyclic_state_of_charge')] = 'e_cyclic'
+        if 'p_min_pu' in attr:
+            use_attr[attr.index('p_min_pu')] = 'e_min_pu'
+        if 'p_max_pu' in attr:
+            use_attr[attr.index('p_max_pu')] = 'e_max_pu'
+        if 'p_nom' in attr:
+            use_attr[attr.index('p_nom')] = 'e_nom'
+        if 'cyclic_state_of_charge' in attr:
+            use_attr[attr.index('cyclic_state_of_charge')] = 'e_cyclic'
     else:
         use_attr = attr
     return use_attr
