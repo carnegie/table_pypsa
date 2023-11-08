@@ -1,4 +1,4 @@
-# Table input for PyPSA
+# Table input and output for PyPSA
 
 ### Build a PyPSA network from an Excel table, also suitable for users with little programming experience
 
