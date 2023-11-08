@@ -76,7 +76,7 @@ def update_component_attribute_dict(attributes_from_file):
     Create dictionary of allowable attributes for each component type
     """
     component_attribute_dict = pypsa.descriptors.Dict({k: v.copy() for k, v in pypsa.components.component_attrs.items()})
-
+    
     bus_numbers = [int(bus.replace("bus","")) for bus in attributes_from_file if bus is not None and bus.startswith('bus') and bus != 'bus']
     # Add attributes for components that are not in default PyPSA
 
@@ -104,12 +104,18 @@ def define_special_attributes(comp, attr):
     # for storage unit replace 'efficiency' with 'efficiency_store'
     elif comp == 'StorageUnit':
         use_attr = list(attr)
-        use_attr[attr.index('efficiency')] = 'efficiency_store'
+        if 'efficiency' in attr:
+            use_attr[attr.index('efficiency')] = 'efficiency_store'
     elif comp == 'Store':
         use_attr = list(attr)
-        use_attr[attr.index('p_min_pu')] = 'e_min_pu'
-        use_attr[attr.index('p_nom')] = 'e_nom'
-        use_attr[attr.index('cyclic_state_of_charge')] = 'e_cyclic'
+        if 'p_min_pu' in attr:
+            use_attr[attr.index('p_min_pu')] = 'e_min_pu'
+        if 'p_max_pu' in attr:
+            use_attr[attr.index('p_max_pu')] = 'e_max_pu'
+        if 'p_nom' in attr:
+            use_attr[attr.index('p_nom')] = 'e_nom'
+        if 'cyclic_state_of_charge' in attr:
+            use_attr[attr.index('cyclic_state_of_charge')] = 'e_cyclic'
     else:
         use_attr = attr
     return use_attr
@@ -125,7 +131,7 @@ def read_component_data(comp_dict, attr, val, technology, costs_df):
     if attr != None:
         read_attr = None
         # if "name", "bus", or "time_series_file" is in attr or value can be converted to a float, use that
-        if (val != None and (any(x in attr for x in ['name', 'bus', 'carrier', 'time_series_file']) or is_number(val))):
+        if (val != None and (any(x in attr for x in ['name', 'bus', 'carrier', 'time_series_file']) or is_number(val) or '=' in val)):
             comp_dict[attr] = val
         # if otherwise value is a string, use database value if the string is just 'db'
         # if first two letters are db use the rest of the string as the attribute name
