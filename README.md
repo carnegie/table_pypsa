@@ -104,4 +104,6 @@ To run PyPSA in that repository, then run
 
 
 #
-#
+
+[![DOI](https://www.zenodo.org/badge/DOI/10.5281/zenodo.10085173.svg)](https://www.doi.org/10.5281/zenodo.10085173)
+
