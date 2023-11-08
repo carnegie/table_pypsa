@@ -131,7 +131,7 @@ def read_component_data(comp_dict, attr, val, technology, costs_df):
     if attr != None:
         read_attr = None
         # if "name", "bus", or "time_series_file" is in attr or value can be converted to a float, use that
-        if (val != None and (any(x in attr for x in ['name', 'bus', 'carrier', 'time_series_file']) or is_number(val))):
+        if (val != None and (any(x in attr for x in ['name', 'bus', 'carrier', 'time_series_file']) or is_number(val) or '=' in val)):
             comp_dict[attr] = val
         # if otherwise value is a string, use database value if the string is just 'db'
         # if first two letters are db use the rest of the string as the attribute name
