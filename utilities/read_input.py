@@ -236,17 +236,17 @@ def read_input_file_to_dict(file_name):
     
     # Config file path
     cwd = Path.cwd()
-    if cwd.parts[-1] == 'clab_pypsa':
+    if cwd.parts[-1] == 'table_pypsa':
         config_file_path = str(cwd / 'utilities' / 'cost_config.yaml')  # for local or Github action
-        # note in GitHub action the cwd is /home/runner/work/clab_pypsa/clab_pypsa
-    elif (cwd / 'clab_pypsa').is_dir():  # we're above the clab_pypsa dir
-        config_file_path = str(cwd / 'clab_pypsa' / 'utilities' / 'cost_config.yaml')
-    elif 'clab_pypsa' in cwd.parts:  # in case we're running an executable in clab_pypsa/dist/run_pypsa via PyInstaller exe
-        clab_pypsa_index = cwd.parts.index('clab_pypsa')
-        path_to_clab_pypsa = Path(*cwd.parts[:clab_pypsa_index+1])
-        config_file_path = str(path_to_clab_pypsa / 'utilities' / 'cost_config.yaml')
+        # note in GitHub action the cwd is /home/runner/work/table_pypsa/table_pypsa
+    elif (cwd / 'table_pypsa').is_dir():  # we're above the table_pypsa dir
+        config_file_path = str(cwd / 'table_pypsa' / 'utilities' / 'cost_config.yaml')
+    elif 'table_pypsa' in cwd.parts:  # in case we're running an executable in table_pypsa/dist/run_pypsa via PyInstaller exe
+        table_pypsa_index = cwd.parts.index('table_pypsa')
+        path_to_table_pypsa = Path(*cwd.parts[:table_pypsa_index+1])
+        config_file_path = str(path_to_table_pypsa / 'utilities' / 'cost_config.yaml')
     else:
-        logging.error('Current directory is not clab_pypsa and clab directory is not in current directory.')
+        logging.error('Current directory is not table_pypsa and clab directory is not in current directory.')
 
     # Load PyPSA costs
     costs = load_costs(tech_costs=case_data_dict["costs_path"], config=config_file_path, Nyears=nyears)

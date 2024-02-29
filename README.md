@@ -43,11 +43,11 @@ Costs and other technology inputs can be read in from the [PyPSA technology data
 
 with --recursive (this clones PyPSA as a submodule )
 
-```git clone https://github.com/carnegie/clab_pypsa --recursive```
+```git clone https://github.com/carnegie/table_pypsa --recursive```
 
-which creates a directory `clab_pypsa`, cd into that director with
+which creates a directory `table_pypsa`, cd into that director with
 
-```cd clab_pypsa``` 
+```cd table_pypsa``` 
 
 #
 ## Install dependencies in the environment
@@ -60,7 +60,7 @@ If you're running for the first time, create the environment with
 
 Then activate the environment with
 
-```conda activate pypsa_table```
+```conda activate table_pypsa_env```
 
 **every time** you want this code.
 
