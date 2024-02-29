@@ -1,6 +1,6 @@
 # Table input and output for PyPSA
 
-### Build a PyPSA network from an Excel table, also suitable for users with little programming experience
+### Build and run a PyPSA network from an Excel table; suitable for users with little programming experience
 
 This repository holds an interface for [PyPSA](https://github.com/PyPSA/pypsa) that allows to build a network from a table input (xlsx or csv) file. It is designed to be easy to use for users with little programming experience. It allows to build a network from a table input file and to optimize a PyPSA network with a single command without requiring detailed knowledge of the PyPSA syntax. Its limitations lie in the complexity of the network that can be built. For more complex networks, we recommend to use [PyPSA-Eur](https://github.com/PyPSA/pypsa-eur) or [PyPSA-Earth](https://github.com/pypsa-meets-earth/pypsa-earth).
 
