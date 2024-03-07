@@ -56,9 +56,6 @@ def load_costs(tech_costs, config, Nyears=1.0):
     costs.at["OCGT", "co2_emissions"] = costs.at["gas", "co2_emissions"]
     costs.at["CCGT", "co2_emissions"] = costs.at["gas", "co2_emissions"]
 
-    costs.at["direct air capture", "energy-input"] = costs.at["direct air capture", "electricity-input"] + costs.at["direct air capture", "heat-input"]  
-
-
     for attr in ("marginal_cost", "capital_cost"):
         overwrites = config.get(attr)
         if overwrites is not None:
