@@ -92,7 +92,7 @@ Note: If you run into a problem executing the code, try running within a 'bash' 
 
 To add `clab_pypsa` as a submodule in a new repository do
 
-```git submodule add -b main https://github.com/carnegie/clab_pypsa```
+```git submodule add -b main https://github.com/carnegie/table_pypsa```
 
 Make sure to update the submodule regularly by doing
 
@@ -100,7 +100,7 @@ Make sure to update the submodule regularly by doing
 
 To run PyPSA in that repository, then run
 
-```python clab_pypsa/run_pypsa.py -f <path_to_your_case_file>```
+```python table_pypsa/run_pypsa.py -f <path_to_your_case_file>```
 
 
 #
