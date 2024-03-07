@@ -88,9 +88,9 @@ Note: If you run into a problem executing the code, try running within a 'bash' 
 
 #
 #
-## Create a new project based on clab_pypsa
+## Create a new project based on table_pypsa
 
-To add `clab_pypsa` as a submodule in a new repository do
+To add `table_pypsa` as a submodule in a new repository, do
 
 ```git submodule add -b main https://github.com/carnegie/table_pypsa```
 
