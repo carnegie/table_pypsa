@@ -233,6 +233,7 @@ def read_input_file_to_dict(file_name):
         case_data_dict['datetime_start'] = convert_slash_to_dash_dates(case_data_dict['datetime_start'])
     nyears = (datetime.strptime(case_data_dict["datetime_end"], "%Y-%m-%d %H:%M:%S") - datetime.strptime(
         case_data_dict["datetime_start"], "%Y-%m-%d %H:%M:%S")).days // 365
+    case_data_dict['nyears'] = nyears
     
     # Config file path
     cwd = Path.cwd()
