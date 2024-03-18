@@ -109,7 +109,7 @@ def stats_add_units(n_stats, case_input_dict):
     """
     return statistics dataframe with units added to column names
     """
-    stats = n_stats().copy()
+    stats = n_stats(groupby=False).copy()
     for col in stats.columns:
         if "Capital Expenditure" in col or "Revenue" in col:
             unit = " [{}]".format(case_input_dict["currency"])
