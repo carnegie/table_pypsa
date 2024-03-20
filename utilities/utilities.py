@@ -125,3 +125,25 @@ def stats_add_units(n_stats, case_input_dict):
             unit = ""
         stats.rename(columns={col: col+unit}, inplace=True)
     return stats
+
+def add_carrier_info(network, stats_df):
+    """
+    Add carrier information to statistics DataFrame
+    """
+    # Initialize a list to hold the carrier information
+    carriers = []
+    sorted_components = sorted(network.iterate_components(), key=lambda x: x[0])
+    # Iterate over components
+    for component_class in sorted_components:
+        if component_class[0] == "Bus":
+            continue
+        # Collect carriers
+        components = getattr(network, component_class[1])
+        # Sort components by index
+        if hasattr(components, "carrier"):
+            sorted_carriers = components.sort_index().carrier.tolist()
+            carriers.extend(sorted_carriers)
+    # Add the carrier info to your statistics DataFrame
+    stats_df.insert(0, "carrier", carriers)
+
+    return stats_df

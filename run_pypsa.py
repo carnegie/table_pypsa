@@ -22,7 +22,7 @@ if not cwd.parts[-1]=='clab_pypsa' and 'clab_pypsa' in os.listdir():
     sys.path.append(str(cwd / 'clab_pypsa'))
     
 from utilities.read_input import read_input_file_to_dict
-from utilities.utilities import skip_until_keyword, get_output_filename, stats_add_units
+from utilities.utilities import skip_until_keyword, get_output_filename, stats_add_units, add_carrier_info
 
 
 def scale_normalize_time_series(component_dict, scaling_factor=1.):
@@ -50,6 +50,8 @@ def divide_results_by_numeric_factor(df_dict, scaling_factor):
         if "time" in results or "results" in results:
             result = df_dict[results]
             for col in result.columns:
+                if "carrier" in col:
+                    continue
                 if "Capacity Factor" in col or "Optimal Capacity" in col or "Curtailment" in col:
                     if "Optimal Capacity" in col:
                         result[col] /= scaling_factor
@@ -238,6 +240,8 @@ def postprocess_results(n, case_dict):
     case_results_df = pd.DataFrame([[n.objective, system_cost]], columns=['objective [{0}]'.format(case_dict["currency"]), 'system cost [{0}/{1}]'.format(case_dict["currency"], case_dict["time_unit"])])
 
     statistics_df = stats_add_units(n.statistics, case_dict)
+    # Add column with carrier to statistics_df
+    statistics_df = add_carrier_info(n, statistics_df)
 
     # Collect results in one dictionary
     df_dict = {'time inputs': time_inputs_df, 'case results': case_results_df, 'component results': statistics_df,
