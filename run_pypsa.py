@@ -5,21 +5,21 @@ from pathlib import Path
 import os, sys
 import pandas as pd
 
-# note in GitHub action the cwd is /home/runner/work/clab_pypsa/clab_pypsa
+# note in GitHub action the cwd is /home/runner/work/table_pypsa/table_pypsa
 
-# if running as .exe from the dist/run_pypsa dir cd to the clab_pypsa dir
+# if running as .exe from the dist/run_pypsa dir cd to the table_pypsa dir
 cwd = Path.cwd()
 if cwd.parts[-1] == 'run_pypsa':
-    os.chdir('../..')  # move up to clab_pypsa
+    os.chdir('../..')  # move up to table_pypsa
     
 # import always relative to the current file
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 
-# if not in clab_pypsa directory add it to the sys.path
+# if not in table_pypsa directory add it to the sys.path
 cwd = Path.cwd()
-if not cwd.parts[-1]=='clab_pypsa' and 'clab_pypsa' in os.listdir():
-    # add path to clab_pypsa to sys.path
-    sys.path.append(str(cwd / 'clab_pypsa'))
+if not cwd.parts[-1]=='table_pypsa' and 'table_pypsa' in os.listdir():
+    # add path to table_pypsa to sys.path
+    sys.path.append(str(cwd / 'table_pypsa'))
     
 from utilities.read_input import read_input_file_to_dict
 from utilities.utilities import skip_until_keyword, get_output_filename, stats_add_units, add_carrier_info
