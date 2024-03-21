@@ -247,7 +247,7 @@ def read_input_file_to_dict(file_name):
         path_to_table_pypsa = Path(*cwd.parts[:table_pypsa_index+1])
         config_file_path = str(path_to_table_pypsa / 'utilities' / 'cost_config.yaml')
     else:
-        logging.error('Current directory is not table_pypsa and clab directory is not in current directory.')
+        logging.error('Current directory is not table_pypsa and table_pypsa directory is not in current directory.')
 
     # Load PyPSA costs
     costs = load_costs(tech_costs=case_data_dict["costs_path"], config=config_file_path, Nyears=nyears)
