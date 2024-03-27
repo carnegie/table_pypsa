@@ -131,7 +131,7 @@ def read_component_data(comp_dict, attr, val, technology, costs_df):
     if attr != None:
         read_attr = None
         # if "name", "bus", or "time_series_file" is in attr or value can be converted to a float, use that
-        if (val != None and (any(x in attr for x in ['name', 'bus', 'carrier', 'time_series_file']) or is_number(val) or '=' in val)):
+        if (val != None and (any(x in attr for x in ['name', 'bus', 'carrier']) or is_number(val) or '=' in val)):
             comp_dict[attr] = val
         # if otherwise value is a string, use database value if the string is just 'db'
         # if first two letters are db use the rest of the string as the attribute name
@@ -147,9 +147,12 @@ def read_component_data(comp_dict, attr, val, technology, costs_df):
                 else:
                     val = val.replace('db_','')
                     read_attr = val
+            elif val.endswith('.csv'):
+                comp_dict[attr] = val
             else:
-                logging.error('Tried to read in a string that is not a number, name, or contains "db" to indicate use a database value. Failed = '+val + ' for attribute ' + attr + ' for component ' + comp_dict["component"] + ' ' + comp_dict["name"])
-
+                logging.error('Failed to read in '+val + ' for attribute ' + attr + ' for component ' + comp_dict["component"] + ' ' + comp_dict["name"])
+                logging.error('Exiting now.')
+                exit()
 
         # if read_attr is defined, use it to get the value from the costs dataframe
         if read_attr != None:
