@@ -114,34 +114,31 @@ def dicts_to_pypsa(case_dict, component_list, component_attr):
     n = add_buses_to_network(n, component_list)
 
     for component_dict in component_list:
-        # for generators and loads, add time series to components
-        if component_dict["component"] == "Generator" or component_dict["component"] == "Load":
-            # Add time series to components
-            if "time_series_file" in component_dict:
-                ts_file = os.path.join(case_dict["input_path"],component_dict["time_series_file"])
+        for attribute in component_dict:
+            # Check if attribute is a string and csv file holding a time series
+            if isinstance(component_dict[attribute], str) and component_dict[attribute].endswith('.csv'):
+                logging.info(f"Processing time series file: {component_dict[attribute]}")
+                # Add time series to components
+                ts_file = os.path.join(case_dict["input_path"],component_dict[attribute])
                 try:
                     ts = process_time_series_file(ts_file, case_dict["datetime_start"], case_dict["datetime_end"])
+                    logging.info(f"Time series file: {component_dict[attribute]} processed successfully.")
+                    logging.info(ts)
                 except Exception:  # if time series not found in input path, use csv's in test directory
-                    logging.warning("Time series file not found for " + component_dict["name"] + ". Using time series files in test directory.")
-                    case_dict['input_path'] = "./test"
-                    ts_file = os.path.join(case_dict["input_path"],component_dict["time_series_file"])
-                    ts = process_time_series_file(ts_file, case_dict["datetime_start"], case_dict["datetime_end"])
+                    logging.error("Time series file not found for " + component_dict[attribute] + " of " + component_dict["name"] + ". Now exiting.")
+                    sys.exit(1)
 
                 if ts is not None:
                     # Include time series as snapshots taking every delta_t value
                     n.snapshots = ts.iloc[::case_dict['delta_t'], :].index if case_dict['delta_t'] else ts.index
                     # Add time series to component
-                    if component_dict["component"] == "Generator":
-                        component_dict["p_max_pu"] = ts.iloc[:, 0]
-                    elif component_dict["component"] == "Load":
-                        component_dict["p_set"] = ts.iloc[:, 0]
+                    component_dict[attribute] = ts.iloc[:, 0]
                     # Scale by numerics_scaling, this avoids rounding otherwise done in Gurobi for small numbers and normalize time series if needed
                     component_dict = scale_normalize_time_series(component_dict, case_dict["numerics_scaling"])
                     # Remove time_series_file from component_dict
-                    component_dict.pop("time_series_file")                    
                 else:
-                    logging.warning("Time series file not found for " + component_dict["name"] + ". Skipping component.")
-                    continue
+                    logging.warning("Time series not properly processed for " + component_dict[attribute] + " of " + component_dict["name"] + ". Now exiting.")
+                    sys.exit(1)
 
         # Without time series file, set snaphsots to number of time steps defined in the input file
         if len(n.snapshots) == 1 and case_dict["no_time_steps"] is not None:
@@ -233,7 +230,7 @@ def postprocess_results(n, case_dict):
     time_results_df = pd.concat([time_results_df, n.links_t["p0"].rename(columns=dict(
         zip(n.links_t["p0"].columns.to_list(),
             [name + " dispatch" for name in n.links_t["p0"].columns.to_list()])))], axis=1)
-
+    
     # Collect objective and system cost in one dataframe
     system_cost = (n.statistics()["Capital Expenditure"].sum() + n.statistics()[
         "Operational Expenditure"].sum()) / case_dict["total_hours"]
