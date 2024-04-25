@@ -91,7 +91,7 @@ def skip_until_keyword(ts_file, keyword):
         line_index = 1
         while True:
             line = next(data_reader)
-            if line[0] == keyword:
+            if keyword in line or keyword in line[0]:
                 return line_index
             else:
                 line_index += 1

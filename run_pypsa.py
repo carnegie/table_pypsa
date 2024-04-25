@@ -74,17 +74,19 @@ def process_time_series_file(ts_file, date_time_start, date_time_end):
     Read in time series file and format as pandas dataframe and return dataframe if not empty.
     """
     skiprows = skip_until_keyword(ts_file, 'BEGIN_DATA')
+
     ts = pd.read_csv(ts_file, parse_dates=False, sep=",", skiprows=skiprows)
     ts.columns = [x.lower() for x in ts.columns]
-    ts['hour'] = ts['hour'] - 1  # convert MEM 1..24 to py 0..23
-    ts['date'] = pd.to_datetime(ts[['day', 'month', 'year', 'hour']])
-    ts = ts.set_index(['date'])
-    ts.drop(columns=['day', 'month', 'year', 'hour'], inplace=True)
-    ts = ts.loc[date_time_start: date_time_end]
 
-    # Check dtype of time series
-    if ts.dtypes[0] != 'float64':
-        ts = ts.astype(float)
+    if 'hour' in ts.columns:
+        ts['hour'] = ts['hour'] - 1  # convert MEM 1..24 to py 0..23
+        ts['date'] = pd.to_datetime(ts[['day', 'month', 'year', 'hour']])
+        ts.drop(columns=['day', 'month', 'year', 'hour'], inplace=True)
+    elif 'snapshot' in ts.columns:
+        ts.rename(columns={'snapshot': 'date'}, inplace=True)
+        ts['date'] = pd.to_datetime(ts['date']) 
+    ts.set_index('date', inplace=True)
+    ts = ts.loc[date_time_start: date_time_end]
 
     if ts.empty:
         logging.warning("Time series was not properly read in and dataframe is empty! Returning now.")
@@ -118,16 +120,16 @@ def dicts_to_pypsa(case_dict, component_list, component_attr):
         for attr in component_dict:
             # Add time series to components
             if isinstance(component_dict[attr], str) and ".csv" in component_dict[attr]:
-                logging.info("reading time series file")
+                logging.info("Reading time series file")
                 ts_file = os.path.join(case_dict["input_path"],component_dict[attr])
+                if not os.path.exists(ts_file):
+                    logging.error("Time series file not found for {0} in path {1}. Exiting now.".format(component_dict[attr], ts_file))
+                    sys.exit(1)
                 try:
                     ts = process_time_series_file(ts_file, case_dict["datetime_start"], case_dict["datetime_end"])
-                except Exception:  # if time series not found in input path, use csv's in test directory
-                    logging.warning("Time series file not found for " + component_dict["name"] + ". Using time series files in test directory.")
-                    case_dict['input_path'] = "./test"
-                    ts_file = os.path.join(case_dict["input_path"],component_dict[attr])
-                    ts = process_time_series_file(ts_file, case_dict["datetime_start"], case_dict["datetime_end"])
-
+                except Exception:  # if time series not found in input path, exit
+                    logging.error("Didn't process time series file {0} accurately. Exiting now.".format(component_dict[attr]))
+                    sys.exit(1)
                 if ts is not None:
                     # Include time series as snapshots taking every delta_t value
                     n.snapshots = ts.iloc[::case_dict['delta_t'], :].index if case_dict['delta_t'] else ts.index
@@ -230,6 +232,9 @@ def postprocess_results(n, case_dict):
     time_results_df = pd.concat([time_results_df, n.links_t["p0"].rename(columns=dict(
         zip(n.links_t["p0"].columns.to_list(),
             [name + " dispatch" for name in n.links_t["p0"].columns.to_list()])))], axis=1)
+    time_results_df = pd.concat([time_results_df, n.buses_t["marginal_price"].rename(columns=dict(
+        zip(n.buses_t["marginal_price"].columns.to_list(),
+            [name + " marginal cost" for name in n.buses_t["marginal_price"].columns.to_list()])))], axis=1)
 
     # Collect objective and system cost in one dataframe
     system_cost = (n.statistics()["Capital Expenditure"].sum() + n.statistics()[
