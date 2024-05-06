@@ -120,7 +120,9 @@ def dicts_to_pypsa(case_dict, component_list, component_attr):
         for attr in component_dict:
             # Add time series to components
             if isinstance(component_dict[attr], str) and ".csv" in component_dict[attr]:
-                logging.info("Reading time series file")
+                logging.info("Reading time series file for {0} of {1}.".format(attr, component_dict["name"]))
+                factor = component_dict[attr].split("*")[0] if "*" in component_dict[attr] else 1
+                component_dict[attr] = component_dict[attr].split("*")[1] if "*" in component_dict[attr] else component_dict[attr]
                 ts_file = os.path.join(case_dict["input_path"],component_dict[attr])
                 if not os.path.exists(ts_file):
                     logging.error("Time series file not found for {0} in path {1}. Exiting now.".format(component_dict[attr], ts_file))
@@ -134,7 +136,7 @@ def dicts_to_pypsa(case_dict, component_list, component_attr):
                     # Include time series as snapshots taking every delta_t value
                     n.snapshots = ts.iloc[::case_dict['delta_t'], :].index if case_dict['delta_t'] else ts.index
                     # Add time series to component
-                    component_dict[attr] = ts.iloc[:, 0]
+                    component_dict[attr] = ts.iloc[:, 0] * float(factor)
 
                     # Scale by numerics_scaling, this avoids rounding otherwise done in Gurobi for small numbers and normalize time series if needed
                     component_dict = scale_normalize_time_series(component_dict, case_dict["numerics_scaling"])                 
@@ -209,6 +211,12 @@ def postprocess_results(n, case_dict):
                                                              n.generators_t["p_max_pu"].columns.to_list()])))
     time_inputs_df = pd.concat([time_inputs_df, n.loads_t["p_set"].rename(columns=dict(
         zip(n.loads_t["p_set"].columns.to_list(), [name + " load" for name in n.loads_t["p_set"].columns.to_list()])))], axis=1)
+    time_inputs_df = pd.concat([time_inputs_df, n.generators_t["marginal_cost"].rename(columns=dict(
+        zip(n.generators_t["marginal_cost"].columns.to_list(),
+            [name + " marginal cost" for name in n.generators_t["marginal_cost"].columns.to_list()])))], axis=1)
+    time_inputs_df = pd.concat([time_inputs_df, n.links_t["marginal_cost"].rename(columns=dict(
+        zip(n.links_t["marginal_cost"].columns.to_list(),
+            [name + " marginal cost" for name in n.links_t["marginal_cost"].columns.to_list()])))], axis=1)
 
     # Collect generator dispatch, load, storage charged, storage dispatch and storage state of charge in one output dataframe
     time_results_df = n.generators_t["p"]
@@ -284,6 +292,9 @@ def run_pypsa(network, infile, case_dict, component_list, outfile_suffix=""):
     output_file = get_output_filename(case_dict) + outfile_suffix
     # Write results to file
     write_results_to_file(infile, output_file, component_list, output_df_dict)
+
+    # Save network to .nc file
+    # network.export_to_netcdf(output_file + ".nc")
 
 
 if __name__ == "__main__":
