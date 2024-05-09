@@ -30,8 +30,8 @@ def scale_normalize_time_series(component_dict, scaling_factor=1.):
     Scale all float in component_list by a numerics_scaling excluding decay rate, efficiency and charging time
     """
     # Scale all pandas series in component_list by numerics_scaling and normalize by normalization factor
-    if "time_series_file" in component_dict:
-        for key in component_dict:
+    for key in component_dict:
+        if key == "p_set" or key == "p_max_pu":
             # Normalize time series by normalization factor if defined
             if type(component_dict[key]) is pd.Series:
                 normalization = component_dict['normalization'] / component_dict[key].mean() if 'normalization' in component_dict else 1.
