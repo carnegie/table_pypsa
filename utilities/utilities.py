@@ -85,13 +85,13 @@ def skip_until_keyword(ts_file, keyword):
     """
     Number of rows to skip until beginning of data in time series csv file
     """
-    with open(ts_file) as fin:
+    with open(ts_file, encoding='utf-8-sig') as fin:
         # read to keyword and then one more line (header line)
         data_reader = csv.reader(fin)
         line_index = 1
         while True:
             line = next(data_reader)
-            if keyword in line or keyword in line[0]:
+            if line[0] == keyword:
                 return line_index
             else:
                 line_index += 1
