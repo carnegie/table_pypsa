@@ -249,6 +249,9 @@ def postprocess_results(n, case_dict):
         "Operational Expenditure"].sum()) / case_dict["total_hours"]
     case_results_df = pd.DataFrame([[n.objective, system_cost]], columns=['objective [{0}]'.format(case_dict["currency"]), 'system cost [{0}/{1}]'.format(case_dict["currency"], case_dict["time_unit"])])
 
+    # Include component statistics also if 0 after optimization
+    n.statistics.set_parameters(drop_zero=False)
+    # Add units
     statistics_df = stats_add_units(n.statistics, case_dict)
     # Add column with carrier to statistics_df
     statistics_df = add_carrier_info(n, statistics_df)
