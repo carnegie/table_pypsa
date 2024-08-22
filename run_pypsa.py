@@ -82,7 +82,7 @@ def process_time_series_file(ts_file, date_time_start, date_time_end):
         ts['hour'] = ts['hour'] - 1  # convert MEM 1..24 to py 0..23
         ts['date'] = pd.to_datetime(ts[['day', 'month', 'year', 'hour']])
         ts.drop(columns=['day', 'month', 'year', 'hour'], inplace=True)
-    elif 'snapshot' in ts.columns:
+    elif 'snapshot' in ts.columns or 'date' in ts.columns:
         ts.rename(columns={'snapshot': 'date'}, inplace=True)
         ts['date'] = pd.to_datetime(ts['date']) 
     ts.set_index('date', inplace=True)
@@ -91,17 +91,23 @@ def process_time_series_file(ts_file, date_time_start, date_time_end):
     if ts.empty:
         logging.warning("Time series was not properly read in and dataframe is empty! Returning now.")
         return
+    
+    # Add warning when time series doesn't cover the whole time period
+    if date_time_start not in ts.index or date_time_end not in ts.index:
+        logging.warning("Time series doesn't cover the whole time period. Returning now.")
+        return
+    
     return ts
 
 def add_buses_to_network(n, component_list):
     # Add buses to network based on 'bus' and 'bus1' in component_list
     for component_dict in component_list:
-        if "bus" in component_dict:
-            if component_dict["bus"] not in n.buses.index:
-                n.add("Bus", component_dict["bus"])
-        if "bus1" in component_dict:
-            if component_dict["bus1"] not in n.buses.index:
-                n.add("Bus", component_dict["bus1"])
+        for bus_key in ["bus", "bus1"]:
+            bus_value = component_dict.get(bus_key)
+            if bus_value and bus_value not in n.buses.index:
+                n.add("Bus", bus_value, carrier=bus_value)
+            if bus_value and bus_value not in n.carriers.index:
+                n.add("Carrier", bus_value)
     return n
 
 
@@ -129,7 +135,7 @@ def dicts_to_pypsa(case_dict, component_list, component_attr):
                     sys.exit(1)
                 try:
                     ts = process_time_series_file(ts_file, case_dict["datetime_start"], case_dict["datetime_end"])
-                except Exception:  # if time series not found in input path, exit
+                except Exception: 
                     logging.error("Didn't process time series file {0} accurately. Exiting now.".format(component_dict[attr]))
                     sys.exit(1)
                 if ts is not None:
@@ -159,6 +165,9 @@ def dicts_to_pypsa(case_dict, component_list, component_attr):
         # Default carrier to component name if not defined
         if "carrier" not in component_dict:
             component_dict["carrier"] = component_dict["name"]
+        # Add carrier to network if not already in network
+        if component_dict["carrier"] not in n.carriers.index:
+            n.add("Carrier", component_dict["carrier"])
 
         # Add components to network based on component_dict as attributes for network add function, excluding "component" and "name"
         n.add(component_dict["component"], component_dict["name"], **{k: v for k, v in component_dict.items() if k != "component" and k != "name"})
