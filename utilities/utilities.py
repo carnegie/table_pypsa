@@ -81,20 +81,26 @@ def is_number(s):
         return False
 
 
+import csv
+
 def skip_until_keyword(ts_file, keyword):
     """
-    Number of rows to skip until beginning of data in time series csv file
+    Number of rows to skip until beginning of data in time series csv file.
+    Returns the line index of the keyword, or 0 if the keyword is not found.
     """
-    with open(ts_file) as fin:
-        # read to keyword and then one more line (header line)
+    with open(ts_file, encoding='utf-8-sig') as fin:
+        # Read to keyword and then one more line (header line)
         data_reader = csv.reader(fin)
         line_index = 1
-        while True:
-            line = next(data_reader)
-            if line[0] == keyword:
-                return line_index
-            else:
+        try:
+            while True:
+                line = next(data_reader)
+                if line[0] == keyword:
+                    return line_index
                 line_index += 1
+        except StopIteration:
+            return 0  # Return 0 if the keyword is not found
+
 
 def get_output_filename(case_input_dict):
     """

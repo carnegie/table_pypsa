@@ -30,8 +30,8 @@ def scale_normalize_time_series(component_dict, scaling_factor=1.):
     Scale all float in component_list by a numerics_scaling excluding decay rate, efficiency and charging time
     """
     # Scale all pandas series in component_list by numerics_scaling and normalize by normalization factor
-    if "time_series_file" in component_dict:
-        for key in component_dict:
+    for key in component_dict:
+        if key == "p_set" or key == "p_max_pu":
             # Normalize time series by normalization factor if defined
             if type(component_dict[key]) is pd.Series:
                 normalization = component_dict['normalization'] / component_dict[key].mean() if 'normalization' in component_dict else 1.
@@ -74,32 +74,49 @@ def process_time_series_file(ts_file, date_time_start, date_time_end):
     Read in time series file and format as pandas dataframe and return dataframe if not empty.
     """
     skiprows = skip_until_keyword(ts_file, 'BEGIN_DATA')
+
     ts = pd.read_csv(ts_file, parse_dates=False, sep=",", skiprows=skiprows)
     ts.columns = [x.lower() for x in ts.columns]
-    ts['hour'] = ts['hour'] - 1  # convert MEM 1..24 to py 0..23
-    ts['date'] = pd.to_datetime(ts[['day', 'month', 'year', 'hour']])
-    ts = ts.set_index(['date'])
-    ts.drop(columns=['day', 'month', 'year', 'hour'], inplace=True)
-    ts = ts.loc[date_time_start: date_time_end]
+    
+    # Assume first column is datetime unless 'hour' is present
+    if not 'hour' in ts.columns:
+        ts['date'] = pd.to_datetime(ts[ts.columns[0]])
+        ts.drop(columns=[ts.columns[0]], inplace=True)
+        # Drop raw demand if present
+        if 'raw demand (mw)' in ts.columns:
+            ts.drop(columns=['raw demand (mw)'], inplace=True)
+    else:
+        # Date as 'day', 'month', 'year' and 'hour' columns
+        # This corresponds to the format of the time series files from MEM (developed by CLab)
+        ts['hour'] = ts['hour'] - 1  # convert MEM 1..24 to py 0..23
+        ts['date'] = pd.to_datetime(ts[['day', 'month', 'year', 'hour']])
+        ts.drop(columns=['day', 'month', 'year', 'hour'], inplace=True)
 
-    # Check dtype of time series
-    if ts.dtypes[0] != 'float64':
-        ts = ts.astype(float)
 
+    ts.set_index('date', inplace=True)
+
+    # Check if time series exists and covers the whole time period
     if ts.empty:
         logging.warning("Time series was not properly read in and dataframe is empty! Returning now.")
         return
+    # Add warning when time series doesn't cover the whole time period
+    elif date_time_start not in ts.index or date_time_end not in ts.index:
+        logging.warning("Time series doesn't cover the whole time period. Returning now.")
+        return
+    else:
+        ts = ts.loc[date_time_start: date_time_end]
+
     return ts
 
 def add_buses_to_network(n, component_list):
     # Add buses to network based on 'bus' and 'bus1' in component_list
     for component_dict in component_list:
-        if "bus" in component_dict:
-            if component_dict["bus"] not in n.buses.index:
-                n.add("Bus", component_dict["bus"])
-        if "bus1" in component_dict:
-            if component_dict["bus1"] not in n.buses.index:
-                n.add("Bus", component_dict["bus1"])
+        for bus_key in ["bus", "bus1"]:
+            bus_value = component_dict.get(bus_key)
+            if bus_value and bus_value not in n.buses.index:
+                n.add("Bus", bus_value, carrier=bus_value)
+            if bus_value and bus_value not in n.carriers.index:
+                n.add("Carrier", bus_value)
     return n
 
 
@@ -114,30 +131,32 @@ def dicts_to_pypsa(case_dict, component_list, component_attr):
     n = add_buses_to_network(n, component_list)
 
     for component_dict in component_list:
-        for attribute in component_dict:
-            # Check if attribute is a string and csv file holding a time series
-            if isinstance(component_dict[attribute], str) and component_dict[attribute].endswith('.csv'):
-                logging.info(f"Processing time series file: {component_dict[attribute]}")
-                # Add time series to components
-                ts_file = os.path.join(case_dict["input_path"],component_dict[attribute])
+        # for generators and loads, add time series to components
+        for attr in component_dict:
+            # Add time series to components
+            if isinstance(component_dict[attr], str) and ".csv" in component_dict[attr]:
+                logging.info("Reading time series file for {0} of {1}.".format(attr, component_dict["name"]))
+                factor = component_dict[attr].split("*")[0] if "*" in component_dict[attr] else 1
+                component_dict[attr] = component_dict[attr].split("*")[1] if "*" in component_dict[attr] else component_dict[attr]
+                ts_file = os.path.join(case_dict["input_path"],component_dict[attr])
+                if not os.path.exists(ts_file):
+                    logging.error("Time series file not found for {0} in path {1}. Exiting now.".format(component_dict[attr], ts_file))
+                    sys.exit(1)
                 try:
                     ts = process_time_series_file(ts_file, case_dict["datetime_start"], case_dict["datetime_end"])
-                    logging.info(f"Time series file: {component_dict[attribute]} processed successfully.")
-                    logging.info(ts)
-                except Exception:  # if time series not found in input path, use csv's in test directory
-                    logging.error("Time series file not found for " + component_dict[attribute] + " of " + component_dict["name"] + ". Now exiting.")
+                except Exception: 
+                    logging.error("Didn't process time series file {0} accurately. Exiting now.".format(component_dict[attr]))
                     sys.exit(1)
-
                 if ts is not None:
                     # Include time series as snapshots taking every delta_t value
                     n.snapshots = ts.iloc[::case_dict['delta_t'], :].index if case_dict['delta_t'] else ts.index
                     # Add time series to component
-                    component_dict[attribute] = ts.iloc[:, 0]
+                    component_dict[attr] = ts.iloc[:, 0] * float(factor)
+
                     # Scale by numerics_scaling, this avoids rounding otherwise done in Gurobi for small numbers and normalize time series if needed
-                    component_dict = scale_normalize_time_series(component_dict, case_dict["numerics_scaling"])
-                    # Remove time_series_file from component_dict
+                    component_dict = scale_normalize_time_series(component_dict, case_dict["numerics_scaling"])                 
                 else:
-                    logging.warning("Time series not properly processed for " + component_dict[attribute] + " of " + component_dict["name"] + ". Now exiting.")
+                    logging.warning("Time series is None. Exiting now.")
                     sys.exit(1)
 
         # Without time series file, set snaphsots to number of time steps defined in the input file
@@ -155,6 +174,9 @@ def dicts_to_pypsa(case_dict, component_list, component_attr):
         # Default carrier to component name if not defined
         if "carrier" not in component_dict:
             component_dict["carrier"] = component_dict["name"]
+        # Add carrier to network if not already in network
+        if component_dict["carrier"] not in n.carriers.index:
+            n.add("Carrier", component_dict["carrier"])
 
         # Add components to network based on component_dict as attributes for network add function, excluding "component" and "name"
         n.add(component_dict["component"], component_dict["name"], **{k: v for k, v in component_dict.items() if k != "component" and k != "name"})
@@ -207,6 +229,12 @@ def postprocess_results(n, case_dict):
                                                              n.generators_t["p_max_pu"].columns.to_list()])))
     time_inputs_df = pd.concat([time_inputs_df, n.loads_t["p_set"].rename(columns=dict(
         zip(n.loads_t["p_set"].columns.to_list(), [name + " load" for name in n.loads_t["p_set"].columns.to_list()])))], axis=1)
+    time_inputs_df = pd.concat([time_inputs_df, n.generators_t["marginal_cost"].rename(columns=dict(
+        zip(n.generators_t["marginal_cost"].columns.to_list(),
+            [name + " marginal cost" for name in n.generators_t["marginal_cost"].columns.to_list()])))], axis=1)
+    time_inputs_df = pd.concat([time_inputs_df, n.links_t["marginal_cost"].rename(columns=dict(
+        zip(n.links_t["marginal_cost"].columns.to_list(),
+            [name + " marginal cost" for name in n.links_t["marginal_cost"].columns.to_list()])))], axis=1)
 
     # Collect generator dispatch, load, storage charged, storage dispatch and storage state of charge in one output dataframe
     time_results_df = n.generators_t["p"]
@@ -230,12 +258,18 @@ def postprocess_results(n, case_dict):
     time_results_df = pd.concat([time_results_df, n.links_t["p0"].rename(columns=dict(
         zip(n.links_t["p0"].columns.to_list(),
             [name + " dispatch" for name in n.links_t["p0"].columns.to_list()])))], axis=1)
-    
+    time_results_df = pd.concat([time_results_df, n.buses_t["marginal_price"].rename(columns=dict(
+        zip(n.buses_t["marginal_price"].columns.to_list(),
+            [name + " marginal cost" for name in n.buses_t["marginal_price"].columns.to_list()])))], axis=1)
+
     # Collect objective and system cost in one dataframe
     system_cost = (n.statistics()["Capital Expenditure"].sum() + n.statistics()[
         "Operational Expenditure"].sum()) / case_dict["total_hours"]
     case_results_df = pd.DataFrame([[n.objective, system_cost]], columns=['objective [{0}]'.format(case_dict["currency"]), 'system cost [{0}/{1}]'.format(case_dict["currency"], case_dict["time_unit"])])
 
+    # Include component statistics also if 0 after optimization
+    n.statistics.set_parameters(drop_zero=False)
+    # Add units
     statistics_df = stats_add_units(n.statistics, case_dict)
     # Add column with carrier to statistics_df
     statistics_df = add_carrier_info(n, statistics_df)
@@ -279,6 +313,9 @@ def run_pypsa(network, infile, case_dict, component_list, outfile_suffix=""):
     output_file = get_output_filename(case_dict) + outfile_suffix
     # Write results to file
     write_results_to_file(infile, output_file, component_list, output_df_dict)
+
+    # Save network to .nc file
+    # network.export_to_netcdf(output_file + ".nc")
 
 
 if __name__ == "__main__":
