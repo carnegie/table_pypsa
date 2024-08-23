@@ -77,26 +77,35 @@ def process_time_series_file(ts_file, date_time_start, date_time_end):
 
     ts = pd.read_csv(ts_file, parse_dates=False, sep=",", skiprows=skiprows)
     ts.columns = [x.lower() for x in ts.columns]
-
-    if 'hour' in ts.columns:
+    
+    # Assume first column is datetime unless 'hour' is present
+    if not 'hour' in ts.columns:
+        ts['date'] = pd.to_datetime(ts[ts.columns[0]])
+        ts.drop(columns=[ts.columns[0]], inplace=True)
+        # Drop raw demand if present
+        if 'raw demand (mw)' in ts.columns:
+            ts.drop(columns=['raw demand (mw)'], inplace=True)
+    else:
+        # Date as 'day', 'month', 'year' and 'hour' columns
+        # This corresponds to the format of the time series files from MEM (developed by CLab)
         ts['hour'] = ts['hour'] - 1  # convert MEM 1..24 to py 0..23
         ts['date'] = pd.to_datetime(ts[['day', 'month', 'year', 'hour']])
         ts.drop(columns=['day', 'month', 'year', 'hour'], inplace=True)
-    elif 'snapshot' in ts.columns or 'date' in ts.columns:
-        ts.rename(columns={'snapshot': 'date'}, inplace=True)
-        ts['date'] = pd.to_datetime(ts['date']) 
-    ts.set_index('date', inplace=True)
-    ts = ts.loc[date_time_start: date_time_end]
 
+
+    ts.set_index('date', inplace=True)
+
+    # Check if time series exists and covers the whole time period
     if ts.empty:
         logging.warning("Time series was not properly read in and dataframe is empty! Returning now.")
         return
-    
     # Add warning when time series doesn't cover the whole time period
-    if date_time_start not in ts.index or date_time_end not in ts.index:
+    elif date_time_start not in ts.index or date_time_end not in ts.index:
         logging.warning("Time series doesn't cover the whole time period. Returning now.")
         return
-    
+    else:
+        ts = ts.loc[date_time_start: date_time_end]
+
     return ts
 
 def add_buses_to_network(n, component_list):
@@ -147,8 +156,8 @@ def dicts_to_pypsa(case_dict, component_list, component_attr):
                     # Scale by numerics_scaling, this avoids rounding otherwise done in Gurobi for small numbers and normalize time series if needed
                     component_dict = scale_normalize_time_series(component_dict, case_dict["numerics_scaling"])                 
                 else:
-                    logging.warning("Time series file not found for " + component_dict["name"] + ". Skipping component.")
-                    continue
+                    logging.warning("Time series is None. Exiting now.")
+                    sys.exit(1)
 
         # Without time series file, set snaphsots to number of time steps defined in the input file
         if len(n.snapshots) == 1 and case_dict["no_time_steps"] is not None:
