@@ -339,9 +339,6 @@ def run_pypsa(network, infile, case_dict, component_list, outfile_suffix=""):
     # Solve the linear optimization power flow with Gurobi
     model = network.optimize.create_model()
     model = add_bicharger_constraint(model, network)
-    # print all columns
-    pd.set_option('display.max_columns', None)
-    logging.info(network.links)
     network.optimize.solve_model(solver_name=case_dict['solver'])
 
     # Check if optimization was successful
