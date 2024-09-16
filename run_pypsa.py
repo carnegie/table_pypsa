@@ -284,6 +284,44 @@ def postprocess_results(n, case_dict):
     return df_dict
 
 
+def add_bicharger_constraint(m, n):
+    """
+    Add constraint requiring the same sizing for charging and discharging power
+    """
+    # Add bi-directional charging constraint if bicharger in name of component
+
+    # Filter links with 'bicharger' in their name
+    bicharger_links = [link for link in n.links.index if 'bicharger' in link]
+
+    # Create a dictionary to store matching charger-discharger pairs
+    bicharger_pairs = {}
+
+    # Search for matching charger-discharger pairs based on the prefix before '-bicharger'
+    for link in bicharger_links:
+        # Extract the prefix, assuming the format is '*-bicharger'
+        prefix = link.split('-bicharger')[0]
+        possible_matches = [l for l in bicharger_links if l.startswith(prefix) and l != link]
+    
+        # If a matching pair is found, store it
+        if possible_matches and not prefix in bicharger_pairs:
+            bicharger_pairs[prefix] = (link, possible_matches[0]) 
+
+    # Add constraints for each matching pair
+    for prefix, (charger_link, discharger_link) in bicharger_pairs.items():
+        # Get the power and efficiency values for the charger and discharger
+        logging.info(f"Found bi-directional charging pair for {prefix}: {charger_link} and {discharger_link}")
+        p_charger = m.variables['Link-p_nom'].at[charger_link]
+        p_discharger = m.variables['Link-p_nom'].at[discharger_link]
+        efficiency = n.links.at[discharger_link, 'efficiency']
+        logging.info(f"Charger power: {p_charger}, discharger power: {p_discharger}, Efficiency: {efficiency}")
+
+        # Define the symbolic expression for the constraint (without evaluation)
+        constraint_expression = p_charger - p_discharger * efficiency
+        # Add the constraint
+        m.add_constraints(lhs=constraint_expression, sign="=", rhs=0, name="bicharger_constraint_" + prefix)
+
+    return m
+
 def build_network(infile):
     """ infile: string path for .xlsx or .csv case file """
     
@@ -299,7 +337,12 @@ def build_network(infile):
 def run_pypsa(network, infile, case_dict, component_list, outfile_suffix=""):
 
     # Solve the linear optimization power flow with Gurobi
-    network.optimize(solver_name=case_dict['solver'])
+    model = network.optimize.create_model()
+    model = add_bicharger_constraint(model, network)
+    # print all columns
+    pd.set_option('display.max_columns', None)
+    logging.info(network.links)
+    network.optimize.solve_model(solver_name=case_dict['solver'])
 
     # Check if optimization was successful
     if not hasattr(network, 'objective'):
