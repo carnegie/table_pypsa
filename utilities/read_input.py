@@ -75,7 +75,8 @@ def update_component_attribute_dict(attributes_from_file):
     """
     Create dictionary of allowable attributes for each component type
     """
-    component_attribute_dict = pypsa.descriptors.Dict({k: v.copy() for k, v in pypsa.components.component_attrs.items()})
+    
+    component_attribute_dict = {k: v.copy() for k, v in pypsa.components.component_attrs.items()}
     
     bus_numbers = [int(bus.replace("bus","")) for bus in attributes_from_file if bus is not None and bus.startswith('bus') and bus != 'bus']
     # Add attributes for components that are not in default PyPSA

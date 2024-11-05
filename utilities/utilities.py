@@ -138,13 +138,13 @@ def add_carrier_info(network, stats_df):
     """
     # Initialize a list to hold the carrier information
     carriers = []
-    sorted_components = sorted(network.iterate_components(), key=lambda x: x[0])
+    sorted_components = sorted(network.iterate_components(), key=lambda x: x.name)
     # Iterate over components
     for component_class in sorted_components:
-        if component_class[0] == "Bus":
+        if component_class.name == "Bus":
             continue
         # Collect carriers
-        components = getattr(network, component_class[1])
+        components = getattr(network, component_class.list_name)
         # Sort components by index
         if hasattr(components, "carrier"):
             sorted_carriers = components.sort_index().carrier.tolist()
