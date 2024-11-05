@@ -21,39 +21,39 @@ def main(year):
     # Only keep contiguous US
     contiguous_48_bbox = box(minx=-125, miny=24.396308, maxx=-66.93457, maxy=49.384358)
     # Clip the US geometry to the bounding box
-    CONUS = US.geometry.intersection(contiguous_48_bbox)
+    region = US.geometry.intersection(contiguous_48_bbox)
 
-    # Loop over the years
-    logging.info(f"Processing {year}")
+    region_name = "conus"
 
     # Define the cutout; this will not yet trigger any major operations
     cutout = atlite.Cutout(
-        path=f"conus-{year}", module="era5", bounds=CONUS.unary_union.bounds, time=slice(f"{year}-01", f"{year}-12"))
+        path=f"{region_name}-{year}", module="era5", 
+        bounds=region.unary_union.bounds, 
+        time=f"{year}",
+        chunks={"time": 100,},)
     # This is where all the work happens (this can take some time).
-    cutout.prepare()
+    cutout.prepare(
+        compression={"zlib": True, "complevel": 9},
+        monthly_requests=True,
+        concurrent_requests=True)
 
     # Extract the wind power generation capacity factors
     wind_power_generation = cutout.wind(
         "Vestas_V112_3MW", 
-        shapes=CONUS,
-        per_unit=True
+        capacity_factor_timeseries=True,
         )
 
     # Extract the solar power generation capacity factors
     solar_power_generation = cutout.pv(
         panel="CSi", 
         orientation='latitude_optimal', 
-        shapes=CONUS,
         tracking="horizontal",
-        per_unit=True)
-
-    solar_power_generation = solar_power_generation.to_pandas().rename(columns={"United States of America": "solar_cf"})
-    wind_power_generation = wind_power_generation.to_pandas().rename(columns={"United States of America": "wind_cf"})
-
-    # Save the data as a csv
-    solar_power_generation.to_csv(f"CONUS_solar_CF_{year}.csv")
-    wind_power_generation.to_csv(f"CONUS_wind_CF_{year}.csv")
-
+        capacity_factor_timeseries=True,)
+    
+    # Save as netcdf
+    wind_power_generation.to_netcdf(f"{region_name}_wind_CF_timeseries_{year}.nc")
+    solar_power_generation.to_netcdf(f"{region_name}_solar_CF_timeseries_{year}.nc")
+    
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("--year", type=int, help="Get data for this year")
