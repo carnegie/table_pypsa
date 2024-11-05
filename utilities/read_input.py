@@ -5,7 +5,7 @@ import numpy as np
 import logging
 import pypsa
 from utilities.load_costs import load_costs
-from utilities.utilities import is_number, remove_empty_rows, find_first_row_with_keyword, check_attributes, concatenate_list_of_strings
+from utilities.utilities import is_number, remove_empty_rows, find_first_row_with_keyword, check_attributes, concatenate_list_of_strings, get_nyears
 from datetime import datetime
 from pathlib import Path
 import pandas as pd
@@ -234,7 +234,8 @@ def read_input_file_to_dict(file_name):
         case_data_dict['datetime_end'] = convert_slash_to_dash_dates(case_data_dict['datetime_end'])
     if '/' in case_data_dict['datetime_start']:
         case_data_dict['datetime_start'] = convert_slash_to_dash_dates(case_data_dict['datetime_start'])
-    nyears = case_data_dict['total_hours'] / 8760.
+    
+    nyears = get_nyears(case_data_dict['datetime_start'], case_data_dict['datetime_end'])
     case_data_dict['nyears'] = nyears
     
     # Config file path
