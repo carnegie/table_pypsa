@@ -1,6 +1,7 @@
 import os, csv
 import pandas as pd
 
+
 def check_directory(directory):
     """
     Check if directory exists, if not create it
@@ -22,7 +23,6 @@ def strip_quotes(string):
     return string
 
 
-
 def remove_empty_rows(list_of_lists):
     """
     Eliminate all lists in a list of lists that are empty or contain only empty strings
@@ -40,13 +40,6 @@ def find_first_row_with_keyword(list_of_lists, keyword):
             if keyword.lower() == list_of_lists[i][0].lower():
                 return i
     return -1
-
-"""
-List files in a directory, stripping out hidden files and eliminating file extension
-
-def list_files_in_directory(directory):
-    return [f.split('.')[0] for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f)) and not f.startswith('.')]
-"""
 
 
 def check_attributes(element_list, dict_of_lists):
@@ -81,7 +74,17 @@ def is_number(s):
         return False
 
 
-import csv
+def get_nyears(start, end):
+    """
+    Return the number of years in the time series
+    """
+    time = pd.date_range(start, end, freq='h')
+    # Drop Feb 29 when leap year
+    if time.is_leap_year.any():
+        time = time[~((time.month == 2) & (time.day == 29))]
+    nyears = len(time) / 8760
+    return nyears
+
 
 def skip_until_keyword(ts_file, keyword):
     """
@@ -138,13 +141,13 @@ def add_carrier_info(network, stats_df):
     """
     # Initialize a list to hold the carrier information
     carriers = []
-    sorted_components = sorted(network.iterate_components(), key=lambda x: x[0])
+    sorted_components = sorted(network.iterate_components(), key=lambda x: x.name)
     # Iterate over components
     for component_class in sorted_components:
-        if component_class[0] == "Bus":
+        if component_class.name == "Bus":
             continue
         # Collect carriers
-        components = getattr(network, component_class[1])
+        components = getattr(network, component_class.list_name)
         # Sort components by index
         if hasattr(components, "carrier"):
             sorted_carriers = components.sort_index().carrier.tolist()
