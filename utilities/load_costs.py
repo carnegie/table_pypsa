@@ -46,15 +46,15 @@ def load_costs(tech_costs, config, Nyears=1.0):
         * Nyears
     )
 
-    costs.at["OCGT", "fuel"] = costs.at["gas", "fuel"]
-    costs.at["CCGT", "fuel"] = costs.at["gas", "fuel"]
-
-    costs["marginal_cost"] = costs["VOM"] + costs["fuel"] / costs["efficiency"]
-
     costs = costs.rename(columns={"CO2 intensity": "co2_emissions"})
 
-    costs.at["OCGT", "co2_emissions"] = costs.at["gas", "co2_emissions"]
-    costs.at["CCGT", "co2_emissions"] = costs.at["gas", "co2_emissions"]
+    if "OCGT" in costs.index or "CCGT" in costs.index or "gas boiler steam" in costs.index:
+        for tech in ["OCGT", "CCGT", "gas boiler steam"]:
+            costs.at[tech, "fuel"] = costs.at["gas", "fuel"]
+            costs.at[tech, "co2_emissions"] = costs.at["gas", "co2_emissions"] if "co2_emissions" in costs.index else 0.
+
+
+    costs["marginal_cost"] = costs["VOM"] + costs["fuel"] / costs["efficiency"] if "fuel" in costs.columns else costs["VOM"]
 
     for attr in ("marginal_cost", "capital_cost"):
         overwrites = config.get(attr)

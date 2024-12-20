@@ -334,7 +334,7 @@ def build_network(infile):
     return network, case_dict, component_list, component_attributes
 
 
-def run_pypsa(network, infile, case_dict, component_list, outfile_suffix=""):
+def run_pypsa(network, case_dict):
 
     # Solve the linear optimization power flow with Gurobi
     model = network.optimize.create_model()
@@ -345,6 +345,9 @@ def run_pypsa(network, infile, case_dict, component_list, outfile_suffix=""):
     if not hasattr(network, 'objective'):
         logging.warning("Optimization was not successful! Returning now.")
         return
+
+
+def write_result(network, case_dict, component_list, infile, outfile_suffix=""):
 
     # Postprocess results and write to excel, pickle
     output_df_dict = postprocess_results(network, case_dict)
@@ -368,3 +371,4 @@ if __name__ == "__main__":
     # Run PyPSA
     n, c_dict, comp_list, comp_attrs = build_network(input_file)
     run_pypsa(n, input_file, c_dict, comp_list)
+    write_result(n, c_dict, comp_list, input_file)
