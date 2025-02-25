@@ -31,7 +31,7 @@ jobs:
         python -m pip install pypsa==0.31.1
         python -m pip install pandas
         python -m pip install openpyxl
-        python -m pip install gurobipy
+        python -m pip install gurobipy==10.0.1
         
     - shell: bash
       id: write-license
