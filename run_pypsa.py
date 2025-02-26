@@ -370,5 +370,5 @@ if __name__ == "__main__":
     
     # Run PyPSA
     n, c_dict, comp_list, comp_attrs = build_network(input_file)
-    run_pypsa(n, input_file, c_dict, comp_list)
+    run_pypsa(n, c_dict)
     write_result(n, c_dict, comp_list, input_file)
